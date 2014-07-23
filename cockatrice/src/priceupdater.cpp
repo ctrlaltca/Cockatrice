@@ -127,19 +127,27 @@ void DBPriceUpdater::updatePrices()
     CardInfo * card;
     int muid;
     SetList sets;
+
+    bool firstQueryParam = true;
     for (int i = 0; i < cards.size(); ++i) {
         card = db->getCard(cards[i], false);
         sets = card->getSets();
         for(int j = 0; j < sets.size(); ++j)
         {
             muid=card->getMuId(sets[j]->getShortName());
+            if (!muid) {
+                continue;
+            }
+
             //qDebug() << "muid " << muid << " card: " << cards[i] << endl;
-            q += (i ? "&" : "?") + QString("m=%1").arg(muid);
+            q += (firstQueryParam ? "?" : "&") + QString("m=%1").arg(muid);
+            firstQueryParam = false;
             muidMap.insert(muid, cards[i]);
         }
     }
     QUrl url(q);
-    //qDebug() << "request prices from: " << url.toString() << endl;
+    // qDebug() << "request prices from: " << url.toString() << endl;
+
     QNetworkReply *reply = nam->get(QNetworkRequest(url));
     connect(reply, SIGNAL(finished()), this, SLOT(downloadFinished()));
 }
@@ -190,7 +198,6 @@ void DBPriceUpdater::downloadFinished()
     QListIterator<QVariant> it(resultList);
     while (it.hasNext()) {
         QVariantMap cardMap = it.next().toMap();
-
 
         // get sets list
         QList<QVariant> editions = cardMap.value("editions").toList();
