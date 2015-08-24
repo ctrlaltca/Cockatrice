@@ -1,27 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<cockatrice_carddatabase version="3">
+<cockatrice_carddatabase version="4">
     <cards>
         <card>
+            <set>CAT</set>
+            <hash>42cca25700c94b6c4e61dd3a054fa510ab0edc7b</hash>
             <name>Cat</name>
-            <set muId="111">CAT</set>
-            <color>G</color>
-            <manacost>2G</manacost>
-            <cmc>2</cmc>
             <type>Creature</type>
-            <pt>3/3</pt>
             <tablerow>0</tablerow>
             <text>Meow!</text>
+            <properties>
+                <manacost>2G</manacost>
+                <muid>111</muid>
+                <colors>G</colors>
+                <number>123</number>
+                <rarity>Uncommon</rarity>
+                <cmc>3</cmc>
+                <pt>3/3</pt>
+            </properties>
         </card>
         <card>
+            <set>DOG</set>
+            <hash>42cca25700c94b6c4e61ff3a054fa510ab0edc7b</hash>
             <name>Dog</name>
-            <set muId="222">DOG</set>
-            <color>R</color>
-            <manacost>2RR</manacost>
-            <cmc>4</cmc>
             <type>Creature</type>
-            <pt>4/4</pt>
             <tablerow>0</tablerow>
             <text>Woof!</text>
+            <properties>
+                <manacost>2R</manacost>
+                <muid>222</muid>
+                <colors>R</colors>
+                <number>456</number>
+                <rarity>Common</rarity>
+                <cmc>4</cmc>
+                <pt>4/4</pt>
+            </properties>
         </card>
     </cards>
 </cockatrice_carddatabase>

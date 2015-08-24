@@ -1,0 +1,72 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="relatedType">
+    <xs:simpleContent>
+        <xs:extension base="xs:string">
+            <xs:attribute type="xs:string" name="count" use="optional"/>
+            <xs:attribute type="xs:string" name="exclude" use="optional"/>
+            <xs:attribute type="xs:string" name="attach" use="optional"/>
+        </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:element name="cockatrice_carddatabase">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="sets" minOccurs="0" maxOccurs="1" >
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="set" maxOccurs="unbounded" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element type="xs:string" name="name"/>
+                    <xs:element type="xs:string" name="longname"/>
+                    <xs:element type="xs:string" name="settype"/>
+                    <xs:element type="xs:string" name="releasedate"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="cards">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="card" maxOccurs="unbounded" minOccurs="0">
+                <xs:complexType>
+                  <xs:choice maxOccurs="unbounded">
+                    <xs:element type="xs:string" name="set"/>
+                    <xs:element type="xs:string" name="hash" minOccurs="0" maxOccurs="1" />
+                    <xs:element type="xs:string" name="name"/>
+                    <xs:element type="xs:string" name="type"/>
+                    <xs:element type="xs:integer" name="tablerow"/>
+                    <xs:element type="xs:string" name="text"/>
+                    <xs:element type="xs:boolean" name="cipt" minOccurs="0"/>
+                    <xs:element type="xs:boolean" name="token" minOccurs="0"/>
+                    <xs:element type="xs:boolean" name="upsidedown" minOccurs="0"/>
+                    <xs:element type="xs:string" name="related" minOccurs="0" maxOccurs="unbounded"/>
+                    <xs:element type="xs:string" name="reverse-related" minOccurs="0" maxOccurs="unbounded"/>
+                    <xs:element name="properties" maxOccurs="unbounded" minOccurs="0">
+                      <xs:complexType>
+                        <xs:choice maxOccurs="unbounded">
+                          <xs:element name="loyalty" minOccurs="0" maxOccurs="1" />
+                          <xs:element name="manacost" minOccurs="0" maxOccurs="1" />
+                          <xs:element name="muid" minOccurs="0" maxOccurs="1" />
+                          <xs:element name="colors" minOccurs="0" maxOccurs="1" />
+                          <xs:element name="number" minOccurs="0" maxOccurs="1" />
+                          <xs:element name="rarity" minOccurs="0" maxOccurs="1" />
+                          <xs:element name="cmc" minOccurs="0" maxOccurs="1" />
+                          <xs:element name="pt" minOccurs="0" maxOccurs="1" />
+                          <xs:element name="picURL" minOccurs="0" maxOccurs="1" />
+                        </xs:choice>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:choice>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+      <xs:attribute type="xs:integer" name="version"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

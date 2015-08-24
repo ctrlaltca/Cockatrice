@@ -74,9 +74,13 @@ struct CopyIfNotAToken
 
     void operator()(const InnerDecklistNode *node, const DecklistCardNode *card) const
     {
-        CardInfoPtr dbCard = cardDatabase.getCard(card->getName());
+        CardInfoPtr dbCard = cardDatabase.getCard(card->getName(), card->getHash());
         if (dbCard && !dbCard->getIsToken()) {
-            DecklistCardNode *addedCard = destination.addCard(card->getName(), node->getName());
+            DecklistCardNode *addedCard = destination.addCard(
+                card->getName(),
+                card->getHash(),
+                card->getSetCode(),
+                node->getName());
             addedCard->setNumber(card->getNumber());
         }
     }

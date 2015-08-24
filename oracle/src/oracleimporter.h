@@ -56,23 +56,19 @@ private:
     QList<SetToDownload> allSets;
     QVariantMap setsMap;
     QString dataDir;
-
-    CardInfoPtr addCard(const QString &setName,
-                        QString cardName,
-                        bool isToken,
-                        int cardId,
-                        QString &setNumber,
-                        QString &cardCost,
-                        QString &cmc,
-                        const QString &cardType,
-                        const QString &cardPT,
-                        const QString &cardLoyalty,
-                        const QString &cardText,
-                        const QStringList &colors,
-                        const QList<CardRelation *> &relatedCards,
-                        const QList<CardRelation *> &reverseRelatedCards,
-                        bool upsideDown,
-                        QString &rarity);
+    CardInfoPtr addCard(
+        CardSetPtr set,
+        const QString &cardHash,
+        QString cardName,
+        bool isToken,
+        QVariantHash properties,
+        const QString &cardType,
+        const QString &cardText,
+        const QString &picUrl,
+        const QList<CardRelation *> &relatedCards,
+        const QList<CardRelation *> &reverseRelatedCards,
+        bool upsideDown
+    );
 signals:
     void setIndexChanged(int cardsImported, int setIndex, const QString &setName);
     void dataReadProgress(int bytesRead, int totalBytes);
@@ -93,7 +89,7 @@ public:
     }
 
 protected:
-    void extractColors(const QStringList &in, QStringList &out);
+    QString extractColors(const QStringList & in);
     void sortColors(QStringList &colors);
 };
 

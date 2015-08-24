@@ -100,15 +100,15 @@ struct CopyMainOrSide
 
     void operator()(const InnerDecklistNode *node, const DecklistCardNode *card) const
     {
-        CardInfoPtr dbCard = cardDatabase.getCard(card->getName());
+        CardInfoPtr dbCard = cardDatabase.getCard(card->getName(), card->getHash());
         if (!dbCard || dbCard->getIsToken())
             return;
 
         DecklistCardNode *addedCard;
         if (node->getName() == DECK_ZONE_SIDE)
-            addedCard = sideboard.addCard(card->getName(), node->getName());
+            addedCard = sideboard.addCard(card->getName(), card->getHash(), card->getSetCode(), node->getName());
         else
-            addedCard = mainboard.addCard(card->getName(), node->getName());
+            addedCard = mainboard.addCard(card->getName(), card->getHash(), card->getSetCode(), node->getName());
         addedCard->setNumber(card->getNumber());
     }
 };

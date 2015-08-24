@@ -128,17 +128,16 @@ void InnerDecklistNode::clearTree()
 }
 
 DecklistCardNode::DecklistCardNode(DecklistCardNode *other, InnerDecklistNode *_parent)
-    : AbstractDecklistCardNode(_parent), name(other->getName()), number(other->getNumber())
+    : AbstractDecklistCardNode(_parent), name(other->getName()), hash(other->getHash()), setCode(other->getSetCode()), number(other->getNumber())
 {
 }
 
-AbstractDecklistNode *InnerDecklistNode::findChild(const QString &name)
+AbstractDecklistNode *InnerDecklistNode::findChild(const QString &name, const QString &hash)
 {
-    for (int i = 0; i < size(); i++) {
-        if (at(i)->getName() == name) {
+    for (int i = 0; i < size(); i++)
+        if (at(i)->getName() == name &&
+            (hash.isEmpty() || at(i)->getHash() == hash))
             return at(i);
-        }
-    }
     return nullptr;
 }
 
@@ -170,6 +169,7 @@ bool InnerDecklistNode::compare(AbstractDecklistNode *other) const
         case ByNumber:
             return compareNumber(other);
         case ByName:
+        case BySetCode:
             return compareName(other);
         default:
             return false;
@@ -203,6 +203,8 @@ bool AbstractDecklistCardNode::compare(AbstractDecklistNode *other) const
     switch (sortMethod) {
         case ByNumber:
             return compareNumber(other);
+        case BySetCode:
+            return compareName(other);
         case ByName:
             return compareName(other);
         default:
@@ -259,7 +261,10 @@ bool InnerDecklistNode::readElement(QXmlStreamReader *xml)
             } else if (childName == "card") {
                 DecklistCardNode *newCard =
                     new DecklistCardNode(xml->attributes().value("name").toString(),
-                                         xml->attributes().value("number").toString().toInt(), this);
+                                         xml->attributes().value("hash").toString(),
+                                         xml->attributes().value("set").toString(),
+                                         xml->attributes().value("number").toString().toInt(),
+                                         this);
                 newCard->readElement(xml);
             }
         } else if (xml->isEndElement() && (childName == "zone"))
@@ -292,6 +297,8 @@ void AbstractDecklistCardNode::writeElement(QXmlStreamWriter *xml)
     xml->writeEmptyElement("card");
     xml->writeAttribute("number", QString::number(getNumber()));
     xml->writeAttribute("name", getName());
+    xml->writeAttribute("hash", getHash());
+    xml->writeAttribute("set", getSetCode());
 }
 
 QVector<QPair<int, int>> InnerDecklistNode::sort(Qt::SortOrder order)
@@ -595,25 +602,11 @@ bool DeckList::loadFromStream_Plain(QTextStream &in)
         }
 
         QString cardName = line.mid(cardNameStart);
-
-        // Common differences between Cockatrice's card names
-        // and what's commonly used in decklists
-        rx.setPattern("’");
-        cardName.replace(rx, "'");
-        rx.setPattern("Æ");
-        cardName.replace(rx, "Ae");
-        rx.setPattern("\\s*[|/]{1,2}\\s*");
-        cardName.replace(rx, " // ");
-
-        // Replace only if the ampersand is preceded by a non-capital letter,
-        // as would happen with acronyms. So 'Fire & Ice' is replaced but not
-        // 'R&D' or 'R & D'.
-        // Qt regexes don't support lookbehind so we capture and replace instead.
-        rx.setPattern("([^A-Z])\\s*&\\s*");
-        if (rx.indexIn(cardName) != -1) {
-            cardName.replace(rx, QString("%1 // ").arg(rx.cap(1)));
-        }
-
+        // fixme is there a way to save the card hash into the file?
+        QString cardHash = "";
+        // fixme is there a way to save the set code into the file?
+        QString setCode = "";
+        // Common differences between cockatrice's card names
         // We need to get the name of the card from the database,
         // but we can't do that until we get the "real" name
         // (name stored in database for the card)
@@ -623,10 +616,10 @@ bool DeckList::loadFromStream_Plain(QTextStream &in)
         cardName = getCompleteCardName(cardName);
 
         // Look for the correct card zone of where to place the new card
-        QString zoneName = getCardZoneFromName(cardName, isSideboard ? DECK_ZONE_SIDE : DECK_ZONE_MAIN);
+        QString zoneName = getCardZoneFromName(cardName, cardHash, isSideboard ? DECK_ZONE_SIDE : DECK_ZONE_MAIN);
 
         okRows++;
-        new DecklistCardNode(cardName, number, getZoneObjFromName(zoneName));
+        new DecklistCardNode(cardName, cardHash, setCode, number, getZoneObjFromName(zoneName));
     }
 
     updateDeckHash();
@@ -743,14 +736,14 @@ int DeckList::getSideboardSize() const
     return size;
 }
 
-DecklistCardNode *DeckList::addCard(const QString &cardName, const QString &zoneName)
+DecklistCardNode *DeckList::addCard(const QString &cardName, const QString &cardHash, const QString &setCode, const QString &zoneName)
 {
     auto *zoneNode = dynamic_cast<InnerDecklistNode *>(root->findChild(zoneName));
     if (zoneNode == nullptr) {
         zoneNode = new InnerDecklistNode(zoneName, root);
     }
 
-    auto *node = new DecklistCardNode(cardName, 1, zoneNode);
+    auto *node = new DecklistCardNode(cardName, cardHash, setCode, 1, zoneNode);
     updateDeckHash();
 
     return node;

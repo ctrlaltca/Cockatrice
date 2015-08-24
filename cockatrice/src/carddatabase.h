@@ -10,6 +10,7 @@
 #include <QSharedPointer>
 #include <QStringList>
 #include <QVector>
+#include <QVariant>
 
 class CardDatabase;
 class CardInfo;
@@ -17,8 +18,6 @@ class CardSet;
 class CardRelation;
 class ICardDatabaseParser;
 
-typedef QMap<QString, QString> QStringMap;
-typedef QMap<QString, int> MuidMap;
 typedef QSharedPointer<CardInfo> CardInfoPtr;
 typedef QSharedPointer<CardSet> CardSetPtr;
 
@@ -117,23 +116,25 @@ class CardInfo : public QObject
     Q_OBJECT
 private:
     CardInfoPtr smartThis;
+    // The card hash
+    QString hash;
+    // The card name
     QString name;
-
-    /*
-     * The name without punctuation or capitalization, for better card tag name
-     * recognition.
-     */
+    // The name without punctuation or capitalization, for better card tag name recognition.
     QString simpleName;
-
-    bool isToken;
-    SetList sets;
-    QString manacost;
-    QString cmc;
+    // The key used to identify this card in the cache
+    QString pixmapCacheKey;
+    // card type
     QString cardtype;
-    QString powtough;
+    // card text
     QString text;
-    QStringList colors;
+    // custom pic url if any
+    QString picUrl;
+    // card set
+    CardSetPtr set;
 
+    // basic card properties; common for all the variations
+    QVariantHash properties;
     // the cards i'm related to
     QList<CardRelation *> relatedCards;
 
@@ -143,72 +144,58 @@ private:
     // the cards thare are reverse-related to me
     QList<CardRelation *> reverseRelatedCardsToMe;
 
-    QString setsNames;
-
+    // positioning properties; used by UI
     bool upsideDownArt;
-    QString loyalty;
-    QStringMap customPicURLs;
-    MuidMap muIds;
-    QStringMap collectorNumbers;
-    QStringMap rarities;
     bool cipt;
     int tableRow;
-    QString pixmapCacheKey;
+
+    bool isToken;
 
 public:
-    explicit CardInfo(const QString &_name = QString(),
-                      bool _isToken = false,
-                      const QString &_manacost = QString(),
-                      const QString &_cmc = QString(),
-                      const QString &_cardtype = QString(),
-                      const QString &_powtough = QString(),
-                      const QString &_text = QString(),
-                      const QStringList &_colors = QStringList(),
-                      const QList<CardRelation *> &_relatedCards = QList<CardRelation *>(),
-                      const QList<CardRelation *> &_reverseRelatedCards = QList<CardRelation *>(),
-                      bool _upsideDownArt = false,
-                      const QString &_loyalty = QString(),
-                      bool _cipt = false,
-                      int _tableRow = 0,
-                      const SetList &_sets = SetList(),
-                      const QStringMap &_customPicURLs = QStringMap(),
-                      MuidMap muids = MuidMap(),
-                      QStringMap _collectorNumbers = QStringMap(),
-                      QStringMap _rarities = QStringMap());
+    explicit CardInfo(
+        CardSetPtr _set,
+        const QString &_hash = QString(),
+        const QString &_name = QString(),
+        bool _isToken = false,
+        QVariantHash _properties = QVariantHash(),
+        const QString &_cardtype = QString(),
+        const QString &_text = QString(),
+        const QString &_picUrl = QString(),
+        const QList<CardRelation *> &_relatedCards = QList<CardRelation *>(),
+        const QList<CardRelation *> &_reverseRelatedCards = QList<CardRelation *>(),
+        bool _upsideDownArt = false,
+        bool _cipt = false,
+        int _tableRow = 0
+        );
     ~CardInfo() override;
 
-    static CardInfoPtr newInstance(const QString &_name = QString(),
+    static CardInfoPtr newInstance(
+                                   CardSetPtr _set,
+                                   const QString &_hash = QString(),
+                                   const QString &_name = QString(),
                                    bool _isToken = false,
-                                   const QString &_manacost = QString(),
-                                   const QString &_cmc = QString(),
+                                   QVariantHash _properties = QVariantHash(),
                                    const QString &_cardtype = QString(),
-                                   const QString &_powtough = QString(),
                                    const QString &_text = QString(),
-                                   const QStringList &_colors = QStringList(),
+                                   const QString &_picUrl = QString(),
                                    const QList<CardRelation *> &_relatedCards = QList<CardRelation *>(),
                                    const QList<CardRelation *> &_reverseRelatedCards = QList<CardRelation *>(),
                                    bool _upsideDownArt = false,
-                                   const QString &_loyalty = QString(),
                                    bool _cipt = false,
-                                   int _tableRow = 0,
-                                   const SetList &_sets = SetList(),
-                                   const QStringMap &_customPicURLs = QStringMap(),
-                                   MuidMap muids = MuidMap(),
-                                   QStringMap _collectorNumbers = QStringMap(),
-                                   QStringMap _rarities = QStringMap());
+                                   int _tableRow = 0);
 
     void setSmartPointer(CardInfoPtr _ptr)
     {
         smartThis = _ptr;
     }
 
+    inline const QString &getHash() const
+    {
+        return hash;
+    }
     inline const QString &getName() const
     {
         return name;
-    }
-    inline const QString &getSetsNames() const
-    {
-        return setsNames;
     }
     const QString &getSimpleName() const
     {
@@ -218,68 +205,36 @@ public:
     {
         return isToken;
     }
-    const SetList &getSets() const
+    CardSetPtr getSet() const
     {
-        return sets;
-    }
-    inline const QString &getManaCost() const
-    {
-        return manacost;
-    }
-    inline const QString &getCmc() const
-    {
-        return cmc;
+        return set;
     }
     inline const QString &getCardType() const
     {
         return cardtype;
     }
-    inline const QString &getPowTough() const
-    {
-        return powtough;
-    }
     const QString &getText() const
     {
         return text;
     }
-    const QString &getPixmapCacheKey() const
+    inline const QString getProperty(QString propertyName) const
     {
-        return pixmapCacheKey;
+        return properties.value(propertyName).toString();
     }
-    const QString &getLoyalty() const
-    {
-        return loyalty;
-    }
+    const QString &getPixmapCacheKey();
     bool getCipt() const
     {
         return cipt;
     }
-    // void setManaCost(const QString &_manaCost) { manacost = _manaCost; emit cardInfoChanged(smartThis); }
-    // void setCmc(const QString &_cmc) { cmc = _cmc; emit cardInfoChanged(smartThis); }
     void setCardType(const QString &_cardType)
     {
         cardtype = _cardType;
-        emit cardInfoChanged(smartThis);
-    }
-    void setPowTough(const QString &_powTough)
-    {
-        powtough = _powTough;
         emit cardInfoChanged(smartThis);
     }
     void setText(const QString &_text)
     {
         text = _text;
         emit cardInfoChanged(smartThis);
-    }
-    void setColors(const QStringList &_colors)
-    {
-        colors = _colors;
-        emit cardInfoChanged(smartThis);
-    }
-    const QChar getColorChar() const;
-    const QStringList &getColors() const
-    {
-        return colors;
     }
     const QList<CardRelation *> &getRelatedCards() const
     {
@@ -302,25 +257,9 @@ public:
     {
         return upsideDownArt;
     }
-    QString getCustomPicURL(const QString &set) const
+    QString getCustomPicURL() const
     {
-        return customPicURLs.value(set);
-    }
-    int getMuId(const QString &set) const
-    {
-        return muIds.value(set);
-    }
-    QString getCollectorNumber(const QString &set) const
-    {
-        return collectorNumbers.value(set);
-    }
-    QString getRarity(const QString &set) const
-    {
-        return rarities.value(set);
-    }
-    QStringMap getRarities() const
-    {
-        return rarities;
+        return picUrl;
     }
     QString getMainCardType() const;
     QString getCorrectedName() const;
@@ -332,32 +271,67 @@ public:
     {
         tableRow = _tableRow;
     }
-    // void setLoyalty(int _loyalty) { loyalty = _loyalty; emit cardInfoChanged(smartThis); }
-    // void setCustomPicURL(const QString &_set, const QString &_customPicURL) { customPicURLs.insert(_set,
-    // _customPicURL); }
-    void setSet(const CardSetPtr &_set)
-    {
-        sets.append(_set);
-        refreshCachedSetNames();
-    }
-    void setMuId(const QString &_set, const int &_muId)
-    {
-        muIds.insert(_set, _muId);
-    }
-    void setSetNumber(const QString &_set, const QString &_setNumber)
-    {
-        collectorNumbers.insert(_set, _setNumber);
-    }
-    void setRarity(const QString &_set, const QString &_setNumber)
-    {
-        rarities.insert(_set, _setNumber);
-    }
-    void addToSet(CardSetPtr set);
+    void addToSet(CardSetPtr _set);
     void emitPixmapUpdated()
     {
         emit pixmapUpdated();
     }
-    void refreshCachedSetNames();
+    void setProperty(const QString &_name, const QString &_value)
+    {
+        properties.insert(_name, _value);
+        emit cardInfoChanged(smartThis);
+    }
+    void setProperty(const QString &_name, const QStringList &_value)
+    {
+        properties.insert(_name, _value);
+        emit cardInfoChanged(smartThis);
+    }
+    QVariantHash getProperties() const {
+        return properties;
+    }
+
+    // Back-compatibiility methods. Remove ASAP
+    const QString getManaCost() const
+    {
+        return getProperty("manacost");
+    }
+    const QString getCmc() const
+    {
+        return getProperty("cmc");
+    }
+    const QString getPowTough() const
+    {
+        return getProperty("pt");
+    }
+    const QString getRarity() const
+    {
+        return getProperty("rarity");
+    }
+    const QString getLoyalty() const
+    {
+        return getProperty("loyalty");
+    }
+    const QString getCollectorNumber() const
+    {
+        return getProperty("number");
+    }
+    const QStringList getColors() const
+    {
+        return properties.value("colors").toStringList();
+    }
+    int getMuId(const QString &set) const
+    {
+        return properties.value("muid").toInt();
+    }
+    const QChar getColorChar() const;
+    void setPowTough(const QString &_powTough)
+    {
+        setProperty("pt", _powTough);
+    }
+    void setColors(const QStringList &_colors)
+    {
+        setProperty("colors", _colors);
+    }
 
     /**
      * Simplify a name to have no punctuation and lowercase all letters, for
@@ -380,7 +354,7 @@ enum LoadStatus
     NoCards
 };
 
-typedef QHash<QString, CardInfoPtr> CardNameMap;
+typedef QHash<QString, CardInfoPtr> CardStringMap;
 typedef QHash<QString, CardSetPtr> SetNameMap;
 
 class CardDatabase : public QObject
@@ -390,12 +364,17 @@ protected:
     /*
      * The cards, indexed by name.
      */
-    CardNameMap cards;
+    CardStringMap cards;
 
     /**
      * The cards, indexed by their simple name.
      */
-    CardNameMap simpleNameCards;
+    CardStringMap simpleNameCards;
+
+    /*
+     * The cards, indexed by hash.
+     */
+    CardStringMap cardHashes;
 
     /*
      * The sets, indexed by short name.
@@ -407,7 +386,7 @@ protected:
     QVector<ICardDatabaseParser *> availableParsers;
 
 private:
-    CardInfoPtr getCardFromMap(const CardNameMap &cardMap, const QString &cardName) const;
+    CardInfoPtr getCardFromMap(const CardStringMap &cardMap, const QString &cardName) const;
     void checkUnknownSets();
     void refreshCachedReverseRelatedCards();
 
@@ -422,7 +401,7 @@ public:
     ~CardDatabase() override;
     void clear();
     void removeCard(CardInfoPtr card);
-    CardInfoPtr getCard(const QString &cardName) const;
+    CardInfoPtr getCard(const QString &cardName, const QString &cardHash) const;
     QList<CardInfoPtr> getCards(const QStringList &cardNames) const;
 
     /*

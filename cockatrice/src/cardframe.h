@@ -30,12 +30,12 @@ public:
         TextOnlyView,
         ImageAndTextView
     };
-    explicit CardFrame(const QString &cardName = QString(), QWidget *parent = nullptr);
+    explicit CardFrame(const QString &cardName = QString(), const QString &cardHash = QString(), QWidget *parent = nullptr);
     void retranslateUi();
 
 public slots:
     void setCard(CardInfoPtr card);
-    void setCard(const QString &cardName);
+    void setCard(const QString &cardName, const QString &cardHash);
     void setCard(AbstractCardItem *card);
     void clear();
     void setViewMode(int mode);

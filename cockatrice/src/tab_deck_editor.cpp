@@ -61,7 +61,7 @@ void TabDeckEditor::createDeckDock()
     deckView->setModel(deckModel);
     deckView->setUniformRowHeights(true);
     deckView->setSortingEnabled(true);
-    deckView->sortByColumn(1, Qt::AscendingOrder);
+    deckView->sortByColumn(2, Qt::AscendingOrder);
     deckView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     deckView->installEventFilter(&deckViewKeySignals);
     connect(deckView->selectionModel(), SIGNAL(currentRowChanged(const QModelIndex &, const QModelIndex &)), this,
@@ -683,15 +683,19 @@ void TabDeckEditor::updateComments()
 
 void TabDeckEditor::updateCardInfoLeft(const QModelIndex &current, const QModelIndex & /*previous*/)
 {
-    cardInfo->setCard(current.sibling(current.row(), 0).data().toString());
+    cardInfo->setCard(databaseModel->getCard(databaseDisplayModel->mapToSource(current).row()));
 }
 
 void TabDeckEditor::updateCardInfoRight(const QModelIndex &current, const QModelIndex & /*previous*/)
 {
     if (!current.isValid())
         return;
-    if (!current.model()->hasChildren(current.sibling(current.row(), 0)))
-        cardInfo->setCard(current.sibling(current.row(), 1).data().toString());
+    if (!current.model()->hasChildren(current.sibling(current.row(), 0))) {
+        QModelIndex sibling = current.sibling(current.row(), 1);
+        QString cardName = sibling.data().toString();
+        QString cardHash = sibling.data(Qt::UserRole).toString();
+        cardInfo->setCard(cardName, cardHash);
+    }
 }
 
 void TabDeckEditor::updateSearch(const QString &search)
@@ -927,9 +931,7 @@ CardInfoPtr TabDeckEditor::currentCardInfo() const
         return {};
     }
 
-    const QString cardName = currentIndex.sibling(currentIndex.row(), 0).data().toString();
-
-    return db->getCard(cardName);
+    return databaseModel->getCard(databaseDisplayModel->mapToSource(currentIndex).row());
 }
 
 void TabDeckEditor::addCardHelper(QString zoneName)
@@ -940,7 +942,7 @@ void TabDeckEditor::addCardHelper(QString zoneName)
     if (info->getIsToken())
         zoneName = DECK_ZONE_TOKENS;
 
-    QModelIndex newCardIndex = deckModel->addCard(info->getName(), zoneName);
+    QModelIndex newCardIndex = deckModel->addCard(info->getName(), info->getHash(), info->getSet()->getShortName(), zoneName);
     recursiveExpand(newCardIndex);
     deckView->setCurrentIndex(newCardIndex);
     setModified(true);
@@ -952,7 +954,9 @@ void TabDeckEditor::actSwapCard()
     const QModelIndex currentIndex = deckView->selectionModel()->currentIndex();
     if (!currentIndex.isValid())
         return;
-    const QString cardName = currentIndex.sibling(currentIndex.row(), 1).data().toString();
+    const QString setCode = currentIndex.sibling(currentIndex.row(), 1).data().toString();
+    const QString cardName = currentIndex.sibling(currentIndex.row(), 2).data().toString();
+    const QString cardHash = currentIndex.sibling(currentIndex.row(), 1).data(Qt::UserRole).toString();
     const QModelIndex gparent = currentIndex.parent().parent();
 
     if (!gparent.isValid())
@@ -962,8 +966,8 @@ void TabDeckEditor::actSwapCard()
     actDecrement();
     const QString otherZoneName = zoneName == DECK_ZONE_MAIN ? DECK_ZONE_SIDE : DECK_ZONE_MAIN;
 
-    // Third argument (true) says create the card no mater what, even if not in DB
-    QModelIndex newCardIndex = deckModel->addCard(cardName, otherZoneName, true);
+    // Fourth argument (true) says create the card no mater what, even if not in DB
+    QModelIndex newCardIndex = deckModel->addCard(cardName, cardHash, setCode, otherZoneName, true);
     recursiveExpand(newCardIndex);
 
     setModified(true);
@@ -1017,7 +1021,7 @@ void TabDeckEditor::decrementCardHelper(QString zoneName)
     if (info->getIsToken())
         zoneName = DECK_ZONE_TOKENS;
 
-    idx = deckModel->findCard(info->getName(), zoneName);
+    idx = deckModel->findCard(info->getName(), info->getHash(), zoneName);
     offsetCountAtIndex(idx, -1);
 }
 

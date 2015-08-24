@@ -16,6 +16,7 @@ protected:
     CardInfoPtr info;
     int id;
     QString name;
+    QString hash;
     bool tapped;
     bool facedown;
     int tapAngle;
@@ -34,8 +35,8 @@ private slots:
     }
 signals:
     void hovered(AbstractCardItem *card);
-    void showCardInfoPopup(QPoint pos, QString cardName);
-    void deleteCardInfoPopup(QString cardName);
+    void showCardInfoPopup(QPoint pos, QString cardName, QString hash);
+    void deleteCardInfoPopup(QString cardName, QString hash);
     void updateCardMenu(AbstractCardItem *card);
     void sigPixmapUpdated();
     void cardShiftClicked(QString cardName);
@@ -49,7 +50,7 @@ public:
     {
         return Type;
     }
-    AbstractCardItem(const QString &_name = QString(), Player *_owner = 0, int _id = -1, QGraphicsItem *parent = 0);
+    AbstractCardItem(const QString &_name = QString(), const QString &_hash = QString(), Player *_owner = 0, int _id = -1, QGraphicsItem *parent = 0);
     ~AbstractCardItem();
     QRectF boundingRect() const;
     QSizeF getTranslatedSize(QPainter *painter) const;
@@ -71,7 +72,11 @@ public:
     {
         return name;
     }
-    void setName(const QString &_name = QString());
+    QString getHash() const
+    {
+        return hash;
+    }
+    void setName(const QString &_name = QString(), const QString &_hash = QString());
     qreal getRealZValue() const
     {
         return realZValue;
@@ -96,9 +101,8 @@ public:
     void processHoverEvent();
     void deleteCardInfoPopup()
     {
-        emit deleteCardInfoPopup(name);
+        emit deleteCardInfoPopup(name, hash);
     }
-
 protected:
     void transformPainter(QPainter *painter, const QSizeF &translatedSize, int angle);
     void mousePressEvent(QGraphicsSceneMouseEvent *event);

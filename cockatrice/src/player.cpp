@@ -1107,7 +1107,8 @@ void Player::actCreateAnotherToken()
 void Player::actCreatePredefinedToken()
 {
     QAction *action = static_cast<QAction *>(sender());
-    CardInfoPtr cardInfo = db->getCard(action->text());
+    // FIXME get the id here
+    CardInfoPtr cardInfo = db->getCard(action->text(), QString());
     if (!cardInfo)
         return;
 
@@ -1133,7 +1134,8 @@ void Player::actCreateRelatedCard()
      * then let's allow it to be created via "create another token"
      */
     if (createRelatedFromRelation(sourceCard, cardRelation) && cardRelation->getCanCreateAnother()) {
-        CardInfoPtr cardInfo = db->getCard(dbNameFromTokenDisplayName(cardRelation->getName()));
+        // FIXME add hash to relations
+        CardInfoPtr cardInfo = db->getCard(dbNameFromTokenDisplayName(cardRelation->getName()), "");
         setLastToken(cardInfo);
     }
 }
@@ -1149,7 +1151,8 @@ void Player::actCreateAllRelatedCards()
     relatedCards.append(sourceCard->getInfo()->getReverseRelatedCards2Me());
 
     QList<CardRelation *> nonExcludedRelatedCards = QList<CardRelation *>();
-    QString dbName;
+    // FIXME GET HASH FOR EXISTIN TOKENS HERE (AND REMOVE THE WHITESPACE HACK)
+    QString dbName, dbHash;
     CardRelation *cardRelation = nullptr;
     int tokensTypesCreated = 0;
 
@@ -1180,7 +1183,7 @@ void Player::actCreateAllRelatedCards()
                         if (!cardRelationAll->getDoesAttach() && !cardRelationAll->getIsVariable()) {
                             dbName = dbNameFromTokenDisplayName(cardRelationAll->getName());
                             for (int i = 0; i < cardRelationAll->getDefaultCount(); i++) {
-                                createCard(sourceCard, dbName);
+                                createCard(sourceCard, dbName, dbHash);
                             }
                             tokensTypesCreated++;
                             if (tokensTypesCreated == 1) {
@@ -1194,7 +1197,7 @@ void Player::actCreateAllRelatedCards()
                         if (!cardRelationNotExcluded->getDoesAttach() && !cardRelationNotExcluded->getIsVariable()) {
                             dbName = dbNameFromTokenDisplayName(cardRelationNotExcluded->getName());
                             for (int i = 0; i < cardRelationNotExcluded->getDefaultCount(); i++) {
-                                createCard(sourceCard, dbName);
+                                createCard(sourceCard, dbName, dbHash);
                             }
                             tokensTypesCreated++;
                             if (tokensTypesCreated == 1) {
@@ -1212,7 +1215,8 @@ void Player::actCreateAllRelatedCards()
      * then assign the first to the "Create another" shortcut.
      */
     if (cardRelation != nullptr && cardRelation->getCanCreateAnother()) {
-        CardInfoPtr cardInfo = db->getCard(dbNameFromTokenDisplayName(cardRelation->getName()));
+        // FIXME add hash to relations
+        CardInfoPtr cardInfo = db->getCard(dbNameFromTokenDisplayName(cardRelation->getName()), dbHash);
         setLastToken(cardInfo);
     }
 }
@@ -1222,6 +1226,8 @@ bool Player::createRelatedFromRelation(const CardItem *sourceCard, const CardRel
     if (sourceCard == nullptr || cardRelation == nullptr)
         return false;
     QString dbName = dbNameFromTokenDisplayName(cardRelation->getName());
+    // FIXME GET HASH FOR EXISTIN TOKENS HERE (AND REMOVE THE WHITESPACE HACK)
+    QString dbHash;
     if (cardRelation->getIsVariable()) {
         bool ok;
         dialogSemaphore = true;
@@ -1231,25 +1237,25 @@ bool Player::createRelatedFromRelation(const CardItem *sourceCard, const CardRel
         if (!ok)
             return false;
         for (int i = 0; i < count; i++) {
-            createCard(sourceCard, dbName);
+            createCard(sourceCard, dbName, dbHash);
         }
     } else if (cardRelation->getDefaultCount() > 1) {
         for (int i = 0; i < cardRelation->getDefaultCount(); i++) {
-            createCard(sourceCard, dbName);
+            createCard(sourceCard, dbName, dbHash);
         }
     } else {
         if (cardRelation->getDoesAttach()) {
-            createAttachedCard(sourceCard, dbName);
+            createAttachedCard(sourceCard, dbName, dbHash);
         } else {
-            createCard(sourceCard, dbName);
+            createCard(sourceCard, dbName, dbHash);
         }
     }
     return true;
 }
 
-void Player::createCard(const CardItem *sourceCard, const QString &dbCardName, bool attach)
+void Player::createCard(const CardItem *sourceCard, const QString &dbCardName, const QString &dbCardHash, bool attach)
 {
-    CardInfoPtr cardInfo = db->getCard(dbCardName);
+    CardInfoPtr cardInfo = db->getCard(dbCardName, dbCardHash);
 
     if (cardInfo == nullptr || sourceCard == nullptr)
         return;
@@ -1262,6 +1268,7 @@ void Player::createCard(const CardItem *sourceCard, const QString &dbCardName, b
     Command_CreateToken cmd;
     cmd.set_zone("table");
     cmd.set_card_name(cardInfo->getName().toStdString());
+    cmd.set_card_hash(cardInfo->getHash().toStdString());
     if (cardInfo->getColors().length() > 1) // Multicoloured
         cmd.set_color("m");
     else
@@ -1281,9 +1288,9 @@ void Player::createCard(const CardItem *sourceCard, const QString &dbCardName, b
     sendGameCommand(cmd);
 }
 
-void Player::createAttachedCard(const CardItem *sourceCard, const QString &dbCardName)
+void Player::createAttachedCard(const CardItem *sourceCard, const QString &dbCardHash, const QString &dbCardName)
 {
-    createCard(sourceCard, dbCardName, true);
+    createCard(sourceCard, dbCardName, dbCardHash, true);
 }
 
 void Player::actSayMessage()
@@ -1407,12 +1414,12 @@ void Player::eventCreateToken(const Event_CreateToken &event)
     if (!zone)
         return;
 
-    CardItem *card = new CardItem(this, QString::fromStdString(event.card_name()), event.card_id());
+    CardItem *card = new CardItem(this, QString::fromStdString(event.card_name()), QString::fromStdString(event.card_hash()), event.card_id());
     // use db PT if not provided in event
     if (!QString::fromStdString(event.pt()).isEmpty()) {
         card->setPT(QString::fromStdString(event.pt()));
     } else {
-        CardInfoPtr dbCard = db->getCard(QString::fromStdString(event.card_name()));
+        CardInfoPtr dbCard = db->getCard(QString::fromStdString(event.card_name()), QString::fromStdString(event.card_hash()));
         if (dbCard)
             card->setPT(dbCard->getPowTough());
     }
@@ -1535,8 +1542,10 @@ void Player::eventMoveCard(const Event_MoveCard &event, const GameEventContext &
     if (startZone != targetZone)
         card->deleteCardInfoPopup();
     if (event.has_card_name())
-        card->setName(QString::fromStdString(event.card_name()));
-
+    {
+        QString cardHash = event.has_card_hash() ? QString::fromStdString(event.card_hash()) : QString("");
+        card->setName(QString::fromStdString(event.card_name()), cardHash);
+    }
     if (card->getAttachedTo() && (startZone != targetZone)) {
         CardItem *parentCard = card->getAttachedTo();
         card->setAttachedTo(0);
@@ -1671,7 +1680,7 @@ void Player::eventDrawCards(const Event_DrawCards &event)
         for (int i = 0; i < listSize; ++i) {
             const ServerInfo_Card &cardInfo = event.cards(i);
             CardItem *card = deck->takeCard(0, cardInfo.id());
-            card->setName(QString::fromStdString(cardInfo.name()));
+            card->setName(QString::fromStdString(cardInfo.name()), QString::fromStdString(cardInfo.hash()));
             hand->addCard(card, false, -1);
         }
     } else {
@@ -1710,19 +1719,21 @@ void Player::eventRevealCards(const Event_RevealCards &event)
     if (peeking) {
         for (int i = 0; i < cardList.size(); ++i) {
             QString cardName = QString::fromStdString(cardList.at(i)->name());
+            QString cardHash = QString::fromStdString(cardList.at(i)->hash());
             CardItem *card = zone->getCard(cardList.at(i)->id(), QString());
             if (!card)
                 continue;
-            card->setName(cardName);
+            card->setName(cardName, cardHash);
             emit logRevealCards(this, zone, cardList.at(i)->id(), cardName, this, true);
         }
     } else {
         bool showZoneView = true;
-        QString cardName;
+        QString cardName, cardHash;
         if (cardList.size() == 1) {
             cardName = QString::fromStdString(cardList.first()->name());
+            cardHash = QString::fromStdString(cardList.first()->hash());
             if ((event.card_id() == 0) && dynamic_cast<PileZone *>(zone)) {
-                zone->getCards().first()->setName(cardName);
+                zone->getCards().first()->setName(cardName, cardHash);
                 zone->update();
                 showZoneView = false;
             }

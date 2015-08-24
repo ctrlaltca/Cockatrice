@@ -1227,8 +1227,8 @@ void TabGame::eventSetActivePhase(const Event_SetActivePhase &event,
 void TabGame::newCardAdded(AbstractCardItem *card)
 {
     connect(card, SIGNAL(hovered(AbstractCardItem *)), cardInfo, SLOT(setCard(AbstractCardItem *)));
-    connect(card, SIGNAL(showCardInfoPopup(QPoint, QString)), this, SLOT(showCardInfoPopup(QPoint, QString)));
-    connect(card, SIGNAL(deleteCardInfoPopup(QString)), this, SLOT(deleteCardInfoPopup(QString)));
+    connect(card, SIGNAL(showCardInfoPopup(QPoint, QString, QString)), this, SLOT(showCardInfoPopup(QPoint, QString, QString)));
+    connect(card, SIGNAL(deleteCardInfoPopup(QString, QString)), this, SLOT(deleteCardInfoPopup(QString, QString)));
     connect(card, SIGNAL(updateCardMenu(AbstractCardItem *)), this, SLOT(updateCardMenu(AbstractCardItem *)));
     connect(card, SIGNAL(cardShiftClicked(QString)), this, SLOT(linkCardToChat(QString)));
 }
@@ -1606,7 +1606,8 @@ void TabGame::createDeckViewContainerWidget(bool bReplay)
 
 void TabGame::viewCardInfo(const QString &cardName)
 {
-    cardInfo->setCard(cardName);
+    // fixme add hash here
+    cardInfo->setCard(cardName, "");
 }
 
 void TabGame::createCardInfoDock(bool bReplay)
@@ -1660,8 +1661,8 @@ void TabGame::createMessageDock(bool bReplay)
 {
     messageLog = new MessageLogWidget(tabSupervisor, tabSupervisor, this);
     connect(messageLog, SIGNAL(cardNameHovered(QString)), cardInfo, SLOT(setCard(QString)));
-    connect(messageLog, SIGNAL(showCardInfoPopup(QPoint, QString)), this, SLOT(showCardInfoPopup(QPoint, QString)));
-    connect(messageLog, SIGNAL(deleteCardInfoPopup(QString)), this, SLOT(deleteCardInfoPopup(QString)));
+    connect(messageLog, SIGNAL(showCardInfoPopup(QPoint, QString, QString)), this, SLOT(showCardInfoPopup(QPoint, QString, QString)));
+    connect(messageLog, SIGNAL(deleteCardInfoPopup(QString, QString)), this, SLOT(deleteCardInfoPopup(QString, QString)));
 
     if (!bReplay) {
         connect(messageLog, SIGNAL(openMessageDialog(QString, bool)), this, SIGNAL(openMessageDialog(QString, bool)));

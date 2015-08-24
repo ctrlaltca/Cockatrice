@@ -35,7 +35,7 @@ private:
     Server_CardZone *zone;
     int id;
     int coord_x, coord_y;
-    QString name;
+    QString name, hash;
     QMap<int, int> counters;
     bool tapped;
     bool attacking;
@@ -50,7 +50,7 @@ private:
     QList<Server_Card *> attachedCards;
 
 public:
-    Server_Card(QString _name, int _id, int _coord_x, int _coord_y, Server_CardZone *_zone = 0);
+    Server_Card(QString _name, QString _hash, int _id, int _coord_x, int _coord_y, Server_CardZone *_zone = 0);
     ~Server_Card();
 
     Server_CardZone *getZone() const
@@ -77,6 +77,10 @@ public:
     QString getName() const
     {
         return name;
+    }
+    QString getHash() const
+    {
+        return hash;
     }
     const QMap<int, int> &getCounters() const
     {
@@ -136,6 +140,10 @@ public:
     void setName(const QString &_name)
     {
         name = _name;
+    }
+    void setHash(const QString &_hash)
+    {
+        hash = _hash;
     }
     void setCounter(int id, int value);
     void setTapped(bool _tapped)

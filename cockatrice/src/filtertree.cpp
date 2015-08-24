@@ -204,16 +204,9 @@ bool FilterItem::acceptText(const CardInfoPtr info) const
 
 bool FilterItem::acceptSet(const CardInfoPtr info) const
 {
-    bool status = false;
-    for (auto i = info->getSets().constBegin(); i != info->getSets().constEnd(); i++) {
-        if ((*i)->getShortName().compare(term, Qt::CaseInsensitive) == 0 ||
-            (*i)->getLongName().compare(term, Qt::CaseInsensitive) == 0) {
-            status = true;
-            break;
-        }
-    }
-
-    return status;
+    CardSetPtr set = info->getSet();
+    return (set->getShortName().compare(term, Qt::CaseInsensitive) == 0
+            || set->getLongName().compare(term, Qt::CaseInsensitive) == 0);
 }
 
 bool FilterItem::acceptManaCost(const CardInfoPtr info) const
@@ -334,12 +327,7 @@ bool FilterItem::acceptRarity(const CardInfoPtr info) const
         }
     }
 
-    for (const QString &rareLevel : info->getRarities()) {
-        if (rareLevel.compare(converted_term, Qt::CaseInsensitive) == 0) {
-            return true;
-        }
-    }
-    return false;
+    return info->getRarity().compare(converted_term, Qt::CaseInsensitive) == 0;
 }
 
 bool FilterItem::relationCheck(int cardInfo) const

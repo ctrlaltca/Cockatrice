@@ -6,7 +6,7 @@
 #include <QDesktopWidget>
 #include <QVBoxLayout>
 
-CardInfoWidget::CardInfoWidget(const QString &cardName, QWidget *parent, Qt::WindowFlags flags)
+CardInfoWidget::CardInfoWidget(const QString &cardName, const QString &cardHash, QWidget *parent, Qt::WindowFlags flags)
     : QFrame(parent, flags), aspectRatio((qreal)CARD_HEIGHT / (qreal)CARD_WIDTH), info(nullptr)
 {
     setContentsMargins(3, 3, 3, 3);
@@ -14,6 +14,7 @@ CardInfoWidget::CardInfoWidget(const QString &cardName, QWidget *parent, Qt::Win
     pic->setObjectName("pic");
     text = new CardInfoText();
     text->setObjectName("text");
+    connect(text, SIGNAL(cardLinkClicked(const QString &, const QString &)), this, SLOT(setCard(const QString &, const QString &)));
 
     QVBoxLayout *layout = new QVBoxLayout();
     layout->setObjectName("layout");
@@ -31,7 +32,7 @@ CardInfoWidget::CardInfoWidget(const QString &cardName, QWidget *parent, Qt::Win
     pic->setFixedHeight(pixmapHeight);
     setFixedWidth(pixmapWidth + 150);
 
-    setCard(cardName);
+    setCard(cardName, cardHash);
 
     // ensure our parent gets a valid size to position us correctly
     resize(width(), sizeHint().height());
@@ -49,9 +50,12 @@ void CardInfoWidget::setCard(CardInfoPtr card)
     pic->setCard(info);
 }
 
-void CardInfoWidget::setCard(const QString &cardName)
+void CardInfoWidget::setCard(const QString &cardName, const QString &cardHash)
 {
-    setCard(db->getCardBySimpleName(cardName));
+    if(!cardHash.isEmpty())
+        setCard(db->getCard(cardName, cardHash));
+    else
+        setCard(db->getCardBySimpleName(cardName));
     if (!info)
         text->setInvalidCardName(cardName);
 }

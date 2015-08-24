@@ -36,8 +36,8 @@
 #define ALLSETS_URL "https://mtgjson.com/json/AllSets.json"
 #endif
 
-#define TOKENS_URL "https://raw.githubusercontent.com/Cockatrice/Magic-Token/master/tokens.xml"
-#define SPOILERS_URL "https://raw.githubusercontent.com/Cockatrice/Magic-Spoiler/files/spoiler.xml"
+#define TOKENS_URL "https://raw.githubusercontent.com/Cockatrice/Magic-Token/master/tokens-v4.xml"
+#define SPOILERS_URL "https://raw.githubusercontent.com/Cockatrice/Magic-Spoiler/files/spoiler-v4.xml"
 
 OracleWizard::OracleWizard(QWidget *parent) : QWizard(parent)
 {

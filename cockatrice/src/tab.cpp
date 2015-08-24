@@ -9,14 +9,16 @@ Tab::Tab(TabSupervisor *_tabSupervisor, QWidget *parent)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void Tab::showCardInfoPopup(const QPoint &pos, const QString &cardName)
+void Tab::showCardInfoPopup(const QPoint &pos, const QString &cardName, const QString &cardHash)
 {
     if (infoPopup) {
         infoPopup->deleteLater();
     }
     currentCardName = cardName;
+    currentCardHash = cardHash;
     infoPopup = new CardInfoWidget(
-        cardName, 0, Qt::Widget | Qt::FramelessWindowHint | Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint);
+        cardName, cardHash, 0,
+        Qt::Widget | Qt::FramelessWindowHint | Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint);
     infoPopup->setAttribute(Qt::WA_TransparentForMouseEvents);
     QRect screenRect = qApp->desktop()->screenGeometry(this);
     infoPopup->move(qMax(screenRect.left(), qMin(pos.x() - infoPopup->width() / 2,
@@ -26,10 +28,10 @@ void Tab::showCardInfoPopup(const QPoint &pos, const QString &cardName)
     infoPopup->show();
 }
 
-void Tab::deleteCardInfoPopup(const QString &cardName)
+void Tab::deleteCardInfoPopup(const QString &cardName, const QString & cardHash)
 {
     if (infoPopup) {
-        if ((currentCardName == cardName) || (cardName == "_")) {
+        if ((currentCardName == cardName && currentCardHash == cardHash) || (cardName == "_")) {
             infoPopup->deleteLater();
             infoPopup = 0;
         }

@@ -51,6 +51,7 @@ public:
 enum DeckSortMethod
 {
     ByNumber,
+    BySetCode,
     ByName,
     Default
 };
@@ -69,6 +70,7 @@ public:
         sortMethod = method;
     }
     virtual QString getName() const = 0;
+    virtual QString getHash() const = 0;
     InnerDecklistNode *getParent() const
     {
         return parent;
@@ -103,10 +105,14 @@ public:
     {
         name = _name;
     }
+    QString getHash() const override
+    {
+        return QString("");
+    }
     static QString visibleNameFromName(const QString &_name);
     virtual QString getVisibleName() const;
     void clearTree();
-    AbstractDecklistNode *findChild(const QString &name);
+    AbstractDecklistNode *findChild(const QString &name, const QString &hash = QString());
     int height() const override;
     int recursiveCount(bool countTotalCards = false) const;
     bool compare(AbstractDecklistNode *other) const override;
@@ -128,6 +134,10 @@ public:
     virtual void setNumber(int _number) = 0;
     QString getName() const override = 0;
     virtual void setName(const QString &_name) = 0;
+    virtual QString getHash() const override = 0;
+    virtual void setHash(const QString &_hash) = 0;
+    virtual QString getSetCode() const = 0;
+    virtual void setSetCode(const QString &_code) = 0;
     int height() const override
     {
         return 0;
@@ -143,12 +153,12 @@ public:
 class DecklistCardNode : public AbstractDecklistCardNode
 {
 private:
-    QString name;
+    QString name, hash, setCode;
     int number;
 
 public:
-    explicit DecklistCardNode(QString _name = QString(), int _number = 1, InnerDecklistNode *_parent = nullptr)
-        : AbstractDecklistCardNode(_parent), name(std::move(_name)), number(_number)
+    explicit DecklistCardNode(QString _name = QString(), const QString &_hash = QString(), const QString &_setCode = QString(), int _number = 1, InnerDecklistNode *_parent = nullptr)
+        : AbstractDecklistCardNode(_parent), name(std::move(_name)), hash(_hash), number(_number)
     {
     }
     explicit DecklistCardNode(DecklistCardNode *other, InnerDecklistNode *_parent);
@@ -168,6 +178,22 @@ public:
     {
         name = _name;
     }
+    QString getHash() const override
+    {
+        return hash;
+    }
+    void setHash(const QString &_hash) override
+    {
+        hash = _hash;
+    }
+    QString getSetCode() const override
+    {
+        return setCode;
+    }
+    void setSetCode(const QString &_setCode) override
+    {
+        setCode = _setCode;
+    }
 };
 
 class DeckList : public QObject
@@ -182,7 +208,7 @@ private:
     InnerDecklistNode *getZoneObjFromName(QString zoneName);
 
 protected:
-    virtual QString getCardZoneFromName(const QString /*cardName*/, QString currentZoneName)
+    virtual QString getCardZoneFromName(const QString /*cardName*/, const QString /*cardHash*/, QString currentZoneName)
     {
         return currentZoneName;
     };
@@ -256,7 +282,7 @@ public:
     {
         return root;
     }
-    DecklistCardNode *addCard(const QString &cardName, const QString &zoneName);
+    DecklistCardNode *addCard(const QString &cardName, const QString &cardHash, const QString &setCode, const QString &zoneName);
     bool deleteNode(AbstractDecklistNode *node, InnerDecklistNode *rootNode = nullptr);
 
     /**

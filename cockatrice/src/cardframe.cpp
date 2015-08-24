@@ -9,13 +9,15 @@
 #include <QSplitter>
 #include <QVBoxLayout>
 
-CardFrame::CardFrame(const QString &cardName, QWidget *parent) : QTabWidget(parent), info(nullptr), cardTextOnly(false)
+CardFrame::CardFrame(const QString &cardName, const QString &cardHash, QWidget *parent)
+    : QTabWidget(parent), info(nullptr), cardTextOnly(false)
 {
     setContentsMargins(3, 3, 3, 3);
     pic = new CardInfoPicture();
     pic->setObjectName("pic");
     text = new CardInfoText();
     text->setObjectName("text");
+    connect(text, SIGNAL(cardLinkClicked(const QString &, const QString &)), this, SLOT(setCard(const QString &, const QString &)));
 
     tab1 = new QWidget(this);
     tab2 = new QWidget(this);
@@ -55,7 +57,7 @@ CardFrame::CardFrame(const QString &cardName, QWidget *parent) : QTabWidget(pare
 
     setViewMode(settingsCache->getCardInfoViewMode());
 
-    setCard(db->getCard(cardName));
+    setCard(db->getCard(cardName, cardHash));
 }
 
 void CardFrame::retranslateUi()
@@ -103,9 +105,10 @@ void CardFrame::setCard(CardInfoPtr card)
     pic->setCard(info);
 }
 
-void CardFrame::setCard(const QString &cardName)
+void CardFrame::setCard(const QString &cardName, const QString &cardHash)
 {
-    setCard(db->getCardBySimpleName(cardName));
+    setCard(db->getCard(cardName, cardHash));
+    //setCard(db->getCardBySimpleName(cardName, cardHash));
 }
 
 void CardFrame::setCard(AbstractCardItem *card)

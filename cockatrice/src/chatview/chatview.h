@@ -90,8 +90,8 @@ protected:
 signals:
     void openMessageDialog(const QString &userName, bool focus);
     void cardNameHovered(QString cardName);
-    void showCardInfoPopup(QPoint pos, QString cardName);
-    void deleteCardInfoPopup(QString cardName);
+    void showCardInfoPopup(QPoint pos, QString cardName, QString cardHash);
+    void deleteCardInfoPopup(QString cardName, QString cardHash);
     void addMentionTag(QString mentionTag);
     void messageClickedSignal();
     void showMentionPopup(QString &sender);

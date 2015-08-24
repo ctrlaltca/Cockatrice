@@ -145,7 +145,8 @@ void DlgEditTokens::actAddToken()
         name = QInputDialog::getText(this, tr("Add token"), tr("Please enter the name of the token:"));
         if (name.isEmpty())
             return;
-        if (databaseModel->getDatabase()->getCard(name)) {
+        // FIXME this forces all tokens to have a different name, why?
+        if (databaseModel->getDatabase()->getCard(name, "")) {
             QMessageBox::critical(this, tr("Error"),
                                   tr("The chosen name conflicts with an existing card or token.\nMake sure to enable "
                                      "the 'Token' set in the \"Manage sets\" dialog to display them correctly."));
@@ -154,8 +155,9 @@ void DlgEditTokens::actAddToken()
         }
     } while (askAgain);
 
-    CardInfoPtr card = CardInfo::newInstance(name, true);
-    card->addToSet(databaseModel->getDatabase()->getSet(CardDatabase::TOKENS_SETNAME));
+    QString id = "";
+    CardSetPtr set = databaseModel->getDatabase()->getSet(CardDatabase::TOKENS_SETNAME);
+    CardInfoPtr card = CardInfo::newInstance(set, id, name, true);
     card->setCardType("Token");
     databaseModel->getDatabase()->addCard(card);
 }

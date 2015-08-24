@@ -52,8 +52,8 @@ TabRoom::TabRoom(TabSupervisor *_tabSupervisor,
     connect(chatView, SIGNAL(showMentionPopup(QString &)), this, SLOT(actShowMentionPopup(QString &)));
     connect(chatView, SIGNAL(messageClickedSignal()), this, SLOT(focusTab()));
     connect(chatView, SIGNAL(openMessageDialog(QString, bool)), this, SIGNAL(openMessageDialog(QString, bool)));
-    connect(chatView, SIGNAL(showCardInfoPopup(QPoint, QString)), this, SLOT(showCardInfoPopup(QPoint, QString)));
-    connect(chatView, SIGNAL(deleteCardInfoPopup(QString)), this, SLOT(deleteCardInfoPopup(QString)));
+    connect(chatView, SIGNAL(showCardInfoPopup(QPoint, QString, QString)), this, SLOT(showCardInfoPopup(QPoint, QString, QString)));
+    connect(chatView, SIGNAL(deleteCardInfoPopup(QString, QString)), this, SLOT(deleteCardInfoPopup(QString, QString)));
     connect(chatView, SIGNAL(addMentionTag(QString)), this, SLOT(addMentionTag(QString)));
     connect(settingsCache, SIGNAL(chatMentionCompleterChanged()), this, SLOT(actCompleterChanged()));
     sayLabel = new QLabel;

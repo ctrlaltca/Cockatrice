@@ -16,8 +16,8 @@
 #include <QMenu>
 #include <QPainter>
 
-CardItem::CardItem(Player *_owner, const QString &_name, int _cardid, bool _revealedCard, QGraphicsItem *parent)
-    : AbstractCardItem(_name, _owner, _cardid, parent), zone(0), revealedCard(_revealedCard), attacking(false),
+CardItem::CardItem(Player *_owner, const QString &_name, const QString &_hash, int _cardid, bool _revealedCard, QGraphicsItem *parent)
+    : AbstractCardItem(_name, _hash, _owner, _cardid, parent), zone(0), revealedCard(_revealedCard), attacking(false),
       destroyOnZoneChange(false), doesntUntap(false), dragItem(0), attachedTo(0)
 {
     owner->addCard(this);
@@ -242,7 +242,7 @@ void CardItem::processCardInfo(const ServerInfo_Card &info)
     }
 
     setId(info.id());
-    setName(QString::fromStdString(info.name()));
+    setName(QString::fromStdString(info.name()), QString::fromStdString(info.hash()));
     setAttacking(info.attacking());
     setFaceDown(info.face_down());
     setPT(QString::fromStdString(info.pt()));

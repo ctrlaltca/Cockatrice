@@ -120,7 +120,7 @@ struct FormatDeckListForExport
     void operator()(const InnerDecklistNode *node, const DecklistCardNode *card) const
     {
         // Get the card name
-        CardInfoPtr dbCard = db->getCard(card->getName());
+        CardInfoPtr dbCard = db->getCard(card->getName(), card->getHash());
         if (!dbCard || dbCard->getIsToken()) {
             // If it's a token, we don't care about the card.
             return;
@@ -223,7 +223,7 @@ void DeckLoader::saveToStream_DeckZone(QTextStream &out, const InnerDecklistNode
     for (int j = 0; j < zoneNode->size(); j++) {
         auto *card = dynamic_cast<DecklistCardNode *>(zoneNode->at(j));
 
-        CardInfoPtr info = db->getCard(card->getName());
+        CardInfoPtr info = db->getCard(card->getName(), card->getHash());
         QString cardType = info ? info->getMainCardType() : "unknown";
 
         cardsByType.insert(cardType, card);
@@ -274,9 +274,9 @@ void DeckLoader::saveToStream_DeckZoneCards(QTextStream &out,
     }
 }
 
-QString DeckLoader::getCardZoneFromName(QString cardName, QString currentZoneName)
+QString DeckLoader::getCardZoneFromName(QString cardName, QString cardHash, QString currentZoneName)
 {
-    CardInfoPtr card = db->getCard(cardName);
+    CardInfoPtr card = db->getCard(cardName, cardHash);
 
     if (card && card->getIsToken()) {
         return DECK_ZONE_TOKENS;

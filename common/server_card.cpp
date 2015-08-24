@@ -22,8 +22,8 @@
 #include "server_cardzone.h"
 #include "server_player.h"
 
-Server_Card::Server_Card(QString _name, int _id, int _coord_x, int _coord_y, Server_CardZone *_zone)
-    : zone(_zone), id(_id), coord_x(_coord_x), coord_y(_coord_y), name(_name), tapped(false), attacking(false),
+Server_Card::Server_Card(QString _name, QString _hash, int _id, int _coord_x, int _coord_y, Server_CardZone *_zone)
+    : zone(_zone), id(_id), coord_x(_coord_x), coord_y(_coord_y), name(_name), hash(_hash), tapped(false), attacking(false),
       facedown(false), color(QString()), power(-1), toughness(-1), annotation(QString()), destroyOnZoneChange(false),
       doesntUntap(false), parentCard(0)
 {
@@ -135,9 +135,11 @@ void Server_Card::setParentCard(Server_Card *_parentCard)
 void Server_Card::getInfo(ServerInfo_Card *info)
 {
     QString displayedName = facedown ? QString() : name;
+    QString displayedHash = facedown ? QString() : hash;
 
     info->set_id(id);
     info->set_name(displayedName.toStdString());
+    info->set_hash(displayedHash.toStdString());
     info->set_x(coord_x);
     info->set_y(coord_y);
     QString ptStr = getPT();

@@ -38,7 +38,7 @@ QVariant CardDatabaseModel::data(const QModelIndex &index, int role) const
         case NameColumn:
             return card->getName();
         case SetListColumn:
-            return card->getSetsNames();
+            return card->getSet()->getShortName();
         case ManaCostColumn:
             return role == SortRole ? QString("%1%2").arg(card->getCmc(), 4, QChar('0')).arg(card->getManaCost())
                                     : card->getManaCost();
@@ -91,12 +91,7 @@ bool CardDatabaseModel::checkCardHasAtLeastOneEnabledSet(CardInfoPtr card)
     if (!showOnlyCardsFromEnabledSets)
         return true;
 
-    for (CardSetPtr set : card->getSets()) {
-        if (set->getEnabled())
-            return true;
-    }
-
-    return false;
+    return card->getSet()->getEnabled();
 }
 
 void CardDatabaseModel::cardDatabaseEnabledSetsChanged()

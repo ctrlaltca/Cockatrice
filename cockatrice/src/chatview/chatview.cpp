@@ -505,8 +505,9 @@ void ChatView::mousePressEvent(QMouseEvent *event)
 {
     switch (hoveredItemType) {
         case HoveredCard: {
+            // FIXME is there a way to get the id here?
             if ((event->button() == Qt::MidButton) || (event->button() == Qt::LeftButton))
-                emit showCardInfoPopup(event->globalPos(), hoveredContent);
+                emit showCardInfoPopup(event->globalPos(), hoveredContent, QString());
             break;
         }
         case HoveredUser: {
@@ -540,8 +541,9 @@ void ChatView::mousePressEvent(QMouseEvent *event)
 
 void ChatView::mouseReleaseEvent(QMouseEvent *event)
 {
+    // undocumented feature: sending "_" as the card name deletes any active info popup
     if ((event->button() == Qt::MidButton) || (event->button() == Qt::LeftButton))
-        emit deleteCardInfoPopup(QString("_"));
+        emit deleteCardInfoPopup(QString("_"), QString());
 
     QTextBrowser::mouseReleaseEvent(event);
 }

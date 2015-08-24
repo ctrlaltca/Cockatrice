@@ -24,7 +24,7 @@ private:
     DeckViewCardDragItem *dragItem;
 
 public:
-    DeckViewCard(const QString &_name = QString(), const QString &_originZone = QString(), QGraphicsItem *parent = 0);
+    DeckViewCard(const QString &_name = QString(), const QString &_hash = QString(), const QString &_originZone = QString(), QGraphicsItem *parent = 0);
     ~DeckViewCard();
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     const QString &getOriginZone() const

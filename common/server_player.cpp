@@ -188,7 +188,7 @@ void Server_Player::setupZones()
             if (!currentCard)
                 continue;
             for (int k = 0; k < currentCard->getNumber(); ++k)
-                z->insertCard(new Server_Card(currentCard->getName(), nextCardId++, 0, 0, z), -1, 0);
+                z->insertCard(new Server_Card(currentCard->getName(), currentCard->getHash(), nextCardId++, 0, 0, z), -1, 0);
         }
     }
 
@@ -303,6 +303,7 @@ Response::ResponseCode Server_Player::drawCards(GameEventStorage &ges, int numbe
         ServerInfo_Card *cardInfo = eventPrivate.add_cards();
         cardInfo->set_id(card->getId());
         cardInfo->set_name(card->getName().toStdString());
+        cardInfo->set_hash(card->getHash().toStdString());
     }
 
     ges.enqueueGameEvent(eventPrivate, playerId, GameEventStorageItem::SendToPrivate, playerId);
@@ -479,11 +480,16 @@ Response::ResponseCode Server_Player::moveCard(GameEventStorage &ges,
             bool sourceHiddenToPlayer = card->getFaceDown() || !sourceBeingLookedAt;
             bool sourceHiddenToOthers = card->getFaceDown() || (startzone->getType() != ServerInfo_Zone::PublicZone);
 
-            QString privateCardName, publicCardName;
+            QString privateCardName, publicCardName, privateCardHash, publicCardHash;
             if (!(sourceHiddenToPlayer && targetHiddenToPlayer))
+            {
                 privateCardName = card->getName();
-            if (!(sourceHiddenToOthers && targetHiddenToOthers))
+                privateCardHash = card->getHash();
+            }
+            if (!(sourceHiddenToOthers && targetHiddenToOthers)) {
                 publicCardName = card->getName();
+                publicCardHash = card->getHash();
+            }
 
             int oldCardId = card->getId();
             if ((faceDown && (startzone != targetzone)) || (targetzone->getPlayer() != startzone->getPlayer()))
@@ -498,6 +504,7 @@ Response::ResponseCode Server_Player::moveCard(GameEventStorage &ges,
                 privateOldCardId = -1;
                 privateNewCardId = -1;
                 privateCardName = QString();
+                privateCardHash = QString();
             }
             int privatePosition = -1;
             if (startzone->getType() == ServerInfo_Zone::HiddenZone)
@@ -518,6 +525,8 @@ Response::ResponseCode Server_Player::moveCard(GameEventStorage &ges,
             eventPrivate.set_card_id(privateOldCardId);
             if (!privateCardName.isEmpty())
                 eventPrivate.set_card_name(privateCardName.toStdString());
+            if (!privateCardHash.isEmpty())
+                eventPrivate.set_card_hash(privateCardHash.toStdString());
             eventPrivate.set_position(privatePosition);
             eventPrivate.set_new_card_id(privateNewCardId);
             eventPrivate.set_x(newX);
@@ -540,6 +549,8 @@ Response::ResponseCode Server_Player::moveCard(GameEventStorage &ges,
                 eventOthers.set_card_id(oldCardId);
                 if (!publicCardName.isEmpty())
                     eventOthers.set_card_name(publicCardName.toStdString());
+                if (!publicCardHash.isEmpty())
+                    eventOthers.set_card_hash(publicCardHash.toStdString());
                 eventOthers.set_new_card_id(card->getId());
             }
 
@@ -1139,6 +1150,7 @@ Server_Player::cmdCreateToken(const Command_CreateToken &cmd, ResponseContainer 
         return Response::RespNameNotFound;
 
     QString cardName = QString::fromStdString(cmd.card_name());
+    QString cardHash = QString::fromStdString(cmd.card_hash());
     int x = cmd.x();
     int y = cmd.y();
     if (zone->hasCoords())
@@ -1148,7 +1160,7 @@ Server_Player::cmdCreateToken(const Command_CreateToken &cmd, ResponseContainer 
     if (y < 0)
         y = 0;
 
-    Server_Card *card = new Server_Card(cardName, newCardId(), x, y);
+    Server_Card *card = new Server_Card(cardName, cardHash, newCardId(), x, y);
     card->moveToThread(thread());
     card->setPT(QString::fromStdString(cmd.pt()));
     card->setColor(QString::fromStdString(cmd.color()));
@@ -1161,6 +1173,7 @@ Server_Player::cmdCreateToken(const Command_CreateToken &cmd, ResponseContainer 
     event.set_zone_name(zone->getName().toStdString());
     event.set_card_id(card->getId());
     event.set_card_name(card->getName().toStdString());
+    event.set_card_hash(card->getHash().toStdString());
     event.set_color(card->getColor().toStdString());
     event.set_pt(card->getPT().toStdString());
     event.set_annotation(card->getAnnotation().toStdString());
@@ -1521,8 +1534,10 @@ Server_Player::cmdDumpZone(const Command_DumpZone &cmd, ResponseContainer &rc, G
     for (int i = 0; (i < cards.size()) && (i < numberCards || numberCards == -1); ++i) {
         Server_Card *card = cards[i];
         QString displayedName = card->getFaceDown() ? QString() : card->getName();
+        QString displayedHash = card->getFaceDown() ? QString() : card->getHash();
         ServerInfo_Card *cardInfo = zoneInfo->add_card_list();
         cardInfo->set_name(displayedName.toStdString());
+        cardInfo->set_hash(displayedHash.toStdString());
         if (zone->getType() == ServerInfo_Zone::HiddenZone)
             cardInfo->set_id(i);
         else {
@@ -1649,6 +1664,7 @@ Server_Player::cmdRevealCards(const Command_RevealCards &cmd, ResponseContainer 
 
         cardInfo->set_id(card->getId());
         cardInfo->set_name(card->getName().toStdString());
+        cardInfo->set_hash(card->getHash().toStdString());
         cardInfo->set_x(card->getX());
         cardInfo->set_y(card->getY());
         cardInfo->set_face_down(card->getFaceDown());

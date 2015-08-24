@@ -24,8 +24,8 @@ TabMessage::TabMessage(TabSupervisor *_tabSupervisor,
       otherUserInfo(new ServerInfo_User(_otherUserInfo)), userOnline(true)
 {
     chatView = new ChatView(tabSupervisor, tabSupervisor, 0, true);
-    connect(chatView, SIGNAL(showCardInfoPopup(QPoint, QString)), this, SLOT(showCardInfoPopup(QPoint, QString)));
-    connect(chatView, SIGNAL(deleteCardInfoPopup(QString)), this, SLOT(deleteCardInfoPopup(QString)));
+    connect(chatView, SIGNAL(showCardInfoPopup(QPoint, QString, QString)), this, SLOT(showCardInfoPopup(QPoint, QString, QString)));
+    connect(chatView, SIGNAL(deleteCardInfoPopup(QString, QString)), this, SLOT(deleteCardInfoPopup(QString, QString)));
     connect(chatView, SIGNAL(addMentionTag(QString)), this, SLOT(addMentionTag(QString)));
     sayEdit = new QLineEdit;
     connect(sayEdit, SIGNAL(returnPressed()), this, SLOT(sendMessage()));

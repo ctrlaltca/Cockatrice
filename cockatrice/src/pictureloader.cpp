@@ -46,8 +46,10 @@ public:
 PictureToLoad::PictureToLoad(CardInfoPtr _card) : card(std::move(_card)), setIndex(0)
 {
     if (card) {
-        sortedSets = card->getSets();
-        qSort(sortedSets.begin(), sortedSets.end(), SetDownloadPriorityComparator());
+        sortedSets.clear();
+        CardSetPtr  set = card->getSet();
+        sortedSets << set;
+        // qSort(sortedSets.begin(), sortedSets.end(), EnabledAndKeyCompareFunctor());
     }
 }
 
@@ -206,27 +208,24 @@ QString PictureLoaderWorker::getPicUrl()
     CardSetPtr set = cardBeingDownloaded.getCurrentSet();
     QString picUrl = QString("");
 
-    // if sets have been defined for the card, they can contain custom picUrls
-    if (set) {
-        picUrl = card->getCustomPicURL(set->getShortName());
-        if (!picUrl.isEmpty())
-            return picUrl;
-    }
+    // if a custom url has been defined for the card, use it
+    picUrl = card->getCustomPicURL();
+    if (!picUrl.isEmpty())
+        return picUrl;
 
     // if a card has a muid, use the default url; if not, use the fallback
-    int muid = set ? card->getMuId(set->getShortName()) : 0;
-    picUrl = muid ? settingsCache->getPicUrl() : settingsCache->getPicUrlFallback();
+    QString muid = card->getProperty("muid");
+    picUrl = muid.isEmpty() ? settingsCache->getPicUrlFallback(): settingsCache->getPicUrl();
 
     picUrl.replace("!name!", QUrl::toPercentEncoding(card->getName()));
     picUrl.replace("!name_lower!", QUrl::toPercentEncoding(card->getName().toLower()));
     picUrl.replace("!corrected_name!", QUrl::toPercentEncoding(card->getCorrectedName()));
     picUrl.replace("!corrected_name_lower!", QUrl::toPercentEncoding(card->getCorrectedName().toLower()));
-    picUrl.replace("!cardid!", QUrl::toPercentEncoding(QString::number(muid)));
+    picUrl.replace("!cardid!", QUrl::toPercentEncoding(muid));
     if (set) {
         // renamed from !setnumber! to !collectornumber! on 20160819. Remove the old one when convenient.
-        picUrl.replace("!setnumber!", QUrl::toPercentEncoding(card->getCollectorNumber(set->getShortName())));
-        picUrl.replace("!collectornumber!", QUrl::toPercentEncoding(card->getCollectorNumber(set->getShortName())));
-
+        picUrl.replace("!setnumber!", QUrl::toPercentEncoding(card->getProperty("number")));
+        picUrl.replace("!collectornumber!", QUrl::toPercentEncoding(card->getProperty("number")));
         picUrl.replace("!setcode!", QUrl::toPercentEncoding(set->getShortName()));
         picUrl.replace("!setcode_lower!", QUrl::toPercentEncoding(set->getShortName().toLower()));
         picUrl.replace("!setname!", QUrl::toPercentEncoding(set->getLongName()));
