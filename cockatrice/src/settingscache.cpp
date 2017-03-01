@@ -1,4 +1,6 @@
 #include "settingscache.h"
+#include "releasechannel.h"
+
 #include <QSettings>
 #include <QFile>
 #include <QDir>
@@ -63,6 +65,9 @@ void SettingsCache::translateLegacySettings()
     servers().setPassword(legacySetting.value("password").toString());
     servers().setSavePassword(legacySetting.value("save_password").toInt());
     servers().setAutoConnect(legacySetting.value("auto_connect").toInt());
+    servers().setFPHostName(legacySetting.value("fphostname").toString());
+    servers().setFPPort(legacySetting.value("fpport").toString());
+    servers().setFPPlayerName(legacySetting.value("fpplayername").toString());
     usedKeys.append(legacySetting.allKeys());
     QStringList allKeysServer = legacySetting.allKeys();
     for (int i = 0; i < allKeysServer.size(); ++i) {
@@ -159,7 +164,13 @@ SettingsCache::SettingsCache()
     if(!QFile(settingsPath+"global.ini").exists())
         translateLegacySettings();
 
+    // updates - don't reorder them or their index in the settings won't match
+    releaseChannels << new StableReleaseChannel()
+        << new DevReleaseChannel();
+
     notifyAboutUpdates = settings->value("personal/updatenotification", true).toBool();
+    updateReleaseChannel = settings->value("personal/updatereleasechannel", 0).toInt();
+
     lang = settings->value("personal/lang").toString();
     keepalive = settings->value("personal/keepalive", 5).toInt();
 
@@ -249,6 +260,12 @@ SettingsCache::SettingsCache()
     spectatorsCanSeeEverything = settings->value("game/spectatorscanseeeverything", false).toBool();
     rememberGameSettings = settings->value("game/remembergamesettings", true).toBool();
     clientID = settings->value("personal/clientid", "notset").toString();
+    knownMissingFeatures = settings->value("interface/knownmissingfeatures", "").toString();
+}
+
+void SettingsCache::setKnownMissingFeatures(QString _knownMissingFeatures) {
+    knownMissingFeatures = _knownMissingFeatures;
+    settings->setValue("interface/knownmissingfeatures", knownMissingFeatures);
 }
 
 void SettingsCache::setCardInfoViewMode(const int _viewMode) {
@@ -633,4 +650,10 @@ void SettingsCache::setNotifyAboutUpdate(int _notifyaboutupdate)
 {
     notifyAboutUpdates = _notifyaboutupdate;
     settings->setValue("personal/updatenotification", notifyAboutUpdates);
+}
+
+void SettingsCache::setUpdateReleaseChannel(int _updateReleaseChannel)
+{
+    updateReleaseChannel = _updateReleaseChannel;
+    settings->setValue("personal/updatereleasechannel", updateReleaseChannel);
 }

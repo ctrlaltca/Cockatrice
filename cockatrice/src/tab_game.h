@@ -92,6 +92,7 @@ private slots:
     void refreshShortcuts();
 signals:
     void newCardAdded(AbstractCardItem *card);
+    void notIdle();
 public:
     DeckViewContainer(int _playerId, TabGame *parent);
     void retranslateUi();
@@ -111,6 +112,7 @@ private:
     QMap<int, QString> roomGameTypes;
     int hostId;
     int localPlayerId;
+    const bool isLocalGame;
     bool spectator;
     QMap<int, Player *> players;
     QMap<int, ServerInfo_User> spectators;
@@ -192,6 +194,7 @@ signals:
     void containerProcessingDone();
     void openMessageDialog(const QString &userName, bool focus);
     void openDeckEditor(const DeckLoader *deck);
+    void notIdle();
 private slots:
     void replayNextEvent();
     void replayFinished();
@@ -238,6 +241,7 @@ public:
     const QMap<int, Player *> &getPlayers() const { return players; }
     CardItem *getCard(int playerId, const QString &zoneName, int cardId) const;
     bool isHost() const { return hostId == localPlayerId; }
+    bool getIsLocalGame() const { return isLocalGame; }
     int getGameId() const { return gameInfo.game_id(); }
     QString getTabText() const;
     bool getSpectator() const { return spectator; }

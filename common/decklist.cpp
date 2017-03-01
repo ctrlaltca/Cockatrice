@@ -514,10 +514,20 @@ bool DeckList::loadFromStream_Plain(QTextStream &in)
     bool inSideboard = false;
 
     int okRows = 0;
+    bool titleFound = false;
     while (!in.atEnd()) {
         QString line = in.readLine().simplified();
         if (line.startsWith("//"))
+        {
+            if(!titleFound)
+            {
+                name = line.mid(2).trimmed();
+                titleFound = true;
+            } else if(okRows == 0) {
+                comments += line.mid(2).trimmed() + "\n";
+            }
             continue;
+        }
 
         InnerDecklistNode *zone;
         if (line.startsWith("Sideboard", Qt::CaseInsensitive)) {
@@ -568,9 +578,7 @@ bool DeckList::loadFromStream_Plain(QTextStream &in)
         rx.setPattern("’");
         cardName.replace(rx, "'");
         rx.setPattern("Æ");
-        cardName.replace(rx, "AE");
-        rx.setPattern("^Aether");
-        cardName.replace(rx, "AEther");
+        cardName.replace(rx, "Ae");
         rx.setPattern("\\s*[|/]{1,2}\\s*");
         cardName.replace(rx, " // ");
 
@@ -600,14 +608,15 @@ bool DeckList::loadFromFile_Plain(QIODevice *device)
 
 struct WriteToStream {
     QTextStream &stream;
+    bool prefixSideboardCards;
 
-    WriteToStream(QTextStream &_stream) : stream(_stream) {}
+    WriteToStream(QTextStream &_stream, bool _prefixSideboardCards) : stream(_stream), prefixSideboardCards(_prefixSideboardCards) {}
 
     void operator()(
         const InnerDecklistNode *node,
         const DecklistCardNode *card
     ) {
-       if (node->getName() == "side") {
+       if (prefixSideboardCards && node->getName() == "side") {
            stream << "SB: ";
        }
        stream << QString("%1 %2\n").arg(
@@ -618,24 +627,24 @@ struct WriteToStream {
     }
 };
 
-bool DeckList::saveToStream_Plain(QTextStream &out)
+bool DeckList::saveToStream_Plain(QTextStream &out, bool prefixSideboardCards)
 {
-    WriteToStream writeToStream(out);
+    WriteToStream writeToStream(out, prefixSideboardCards);
     forEachCard(writeToStream);
     return true;
 }
 
-bool DeckList::saveToFile_Plain(QIODevice *device)
+bool DeckList::saveToFile_Plain(QIODevice *device, bool prefixSideboardCards)
 {
     QTextStream out(device);
-    return saveToStream_Plain(out);
+    return saveToStream_Plain(out, prefixSideboardCards);
 }
 
-QString DeckList::writeToString_Plain()
+QString DeckList::writeToString_Plain(bool prefixSideboardCards)
 {
     QString result;
     QTextStream out(&result);
-    saveToStream_Plain(out);
+    saveToStream_Plain(out, prefixSideboardCards);
     return result;
 }
 

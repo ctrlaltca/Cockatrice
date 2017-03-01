@@ -100,6 +100,8 @@ DeckViewContainer::DeckViewContainer(int _playerId, TabGame *parent)
 {
     loadLocalButton = new QPushButton;
     loadRemoteButton = new QPushButton;
+    if (parentGame->getIsLocalGame())
+        loadRemoteButton->setEnabled(false);
     readyStartButton = new ToggleButton;
     readyStartButton->setEnabled(false);
     sideboardLockButton = new ToggleButton;
@@ -307,6 +309,7 @@ TabGame::TabGame(TabSupervisor *_tabSupervisor, GameReplay *_replay)
           secondsElapsed(0),
           hostId(-1),
           localPlayerId(-1),
+          isLocalGame(_tabSupervisor->getIsLocalGame()),
           spectator(true),
           gameStateKnown(false),
           resuming(false),
@@ -375,6 +378,7 @@ TabGame::TabGame(TabSupervisor *_tabSupervisor, QList<AbstractClient *> &_client
           roomGameTypes(_roomGameTypes),
           hostId(event.host_id()),
           localPlayerId(event.player_id()),
+          isLocalGame(_tabSupervisor->getIsLocalGame()),
           spectator(event.spectator()),
           gameStateKnown(false),
           resuming(event.resuming()),
@@ -876,7 +880,7 @@ void TabGame::closeGame()
 void TabGame::eventSpectatorSay(const Event_GameSay &event, int eventPlayerId, const GameEventContext & /*context*/)
 {
     const ServerInfo_User &userInfo = spectators.value(eventPlayerId);
-    messageLog->logSpectatorSay(QString::fromStdString(userInfo.name()), UserLevelFlags(userInfo.user_level()), QString::fromStdString(event.message()));
+    messageLog->logSpectatorSay(QString::fromStdString(userInfo.name()), UserLevelFlags(userInfo.user_level()), QString::fromStdString(userInfo.privlevel()), QString::fromStdString(event.message()));
 }
 
 void TabGame::eventSpectatorLeave(const Event_Leave & /*event*/, int eventPlayerId, const GameEventContext & /*context*/)

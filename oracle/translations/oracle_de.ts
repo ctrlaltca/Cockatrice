@@ -134,7 +134,7 @@ Sie müssen eine URL oder einen Dateinamen als Quelle angeben.</translation>
     <message>
         <location filename="../src/oraclewizard.cpp" line="430"/>
         <source>Do you want to try to download a fresh copy of the uncompressed file instead?</source>
-        <translation>Möchtest du stattdessen eine neue Kopie der nicht komprimierten Datei herunterladen?</translation>
+        <translation>Möchten Sie stattdessen eine neue Kopie der nicht komprimierten Datei herunterladen?</translation>
     </message>
     <message>
         <location filename="../src/oraclewizard.cpp" line="451"/>
@@ -474,7 +474,7 @@ Sie müssen eine URL oder einen Dateinamen als Quelle angeben.</translation>
 <context>
     <name>i18n</name>
     <message>
-        <location filename="../../cockatrice/src/settingscache.cpp" line="147"/>
+        <location filename="../../cockatrice/src/settingscache.cpp" line="152"/>
         <source>English</source>
         <translation>Deutsch (German)</translation>
     </message>

@@ -36,6 +36,9 @@
 #include "main.h"
 #include "window_main.h"
 #include "dlg_connect.h"
+#include "dlg_forgotpasswordrequest.h"
+#include "dlg_forgotpasswordreset.h"
+#include "dlg_forgotpasswordchallenge.h"
 #include "dlg_register.h"
 #include "dlg_settings.h"
 #include "dlg_update.h"
@@ -48,7 +51,6 @@
 #include "settingscache.h"
 #include "tab_game.h"
 #include "version_string.h"
-#include "update_checker.h"
 #include "carddatabase.h"
 #include "window_sets.h"
 #include "dlg_edit_tokens.h"
@@ -166,9 +168,10 @@ void MainWindow::activateAccepted()
 
 void MainWindow::actConnect()
 {
-    DlgConnect dlg(this);
-    if (dlg.exec())
-        client->connectToServer(dlg.getHost(), dlg.getPort(), dlg.getPlayerName(), dlg.getPassword());
+    DlgConnect *dlg = new DlgConnect(this);
+    connect(dlg, SIGNAL(sigStartForgotPasswordRequest()), this, SLOT(actForgotPasswordRequest()));
+    if (dlg->exec())
+        client->connectToServer(dlg->getHost(), dlg->getPort(), dlg->getPlayerName(), dlg->getPassword());
 }
 
 void MainWindow::actRegister()
@@ -325,16 +328,17 @@ void MainWindow::loginError(Response::ResponseCode r, QString reasonStr, quint32
 {
     switch (r) {
         case Response::RespClientUpdateRequired: {
-            QString formatedMissingFeatures;
-            formatedMissingFeatures = "Missing Features: ";
+            QString formattedMissingFeatures;
+            formattedMissingFeatures = "Missing Features: ";
             for (int i = 0; i < missingFeatures.size(); ++i)
-                formatedMissingFeatures.append(QString("\n     %1").arg(QChar(0x2022)) + " " + missingFeatures.value(i)   );
+                formattedMissingFeatures.append(QString("\n     %1").arg(QChar(0x2022)) + " " + missingFeatures.value(i)   );
+            formattedMissingFeatures.append("\nTo update your client, go to Help -> Update Cockatrice.");
 
             QMessageBox msgBox;
             msgBox.setIcon(QMessageBox::Critical);
             msgBox.setWindowTitle(tr("Failed Login"));
-            msgBox.setText(tr("Your client does not support features that the server requires, please update your client and try again."));
-            msgBox.setDetailedText(formatedMissingFeatures);
+            msgBox.setText(tr("Your client seems to be missing features this server requires for connection."));
+            msgBox.setDetailedText(formattedMissingFeatures);
             msgBox.exec();
             break;
         }
@@ -373,13 +377,17 @@ void MainWindow::loginError(Response::ResponseCode r, QString reasonStr, quint32
             break;
         case Response::RespAccountNotActivated: {
             bool ok = false;
-            QString token = QInputDialog::getText(this, tr("Account activation"), tr("Your account has not been activated yet.\nYou need to provide the activation token received in the activation email"), QLineEdit::Normal, QString(), &ok);
+            QString token = QInputDialog::getText(this, tr("Account activation"), tr("Your account has not been activated yet.\nYou need to provide the activation token received in the activation email."), QLineEdit::Normal, QString(), &ok);
             if(ok && !token.isEmpty())
             {
                 client->activateToServer(token);
                 return;
             }
             client->disconnectFromServer();
+            break;
+        }
+        case Response::RespServerFull: {
+            QMessageBox::critical(this, tr("Server Full"), tr("The server has reached its maximum user capacity, please check back later."));
             break;
         }
         default:
@@ -393,9 +401,9 @@ QString MainWindow::extractInvalidUsernameMessage(QString & in)
 {
     QString out = tr("Invalid username.") + "<br/>";
     QStringList rules = in.split(QChar('|'));
-    if (rules.size() == 7)
+    if (rules.size() == 7 || rules.size() == 9)
     {
-        out += tr("Your username must respect these rules:") + "<br><ul>";
+        out += tr("Your username must respect these rules:") + "<ul>";
 
         out += "<li>" + tr("is %1 - %2 characters long").arg(rules.at(0)).arg(rules.at(1)) + "</li>";
         out += "<li>" + tr("can %1 contain lowercase characters").arg((rules.at(2).toInt() > 0) ? "" : tr("NOT")) + "</li>";
@@ -406,6 +414,16 @@ QString MainWindow::extractInvalidUsernameMessage(QString & in)
             out += "<li>" + tr("can contain the following punctuation: %1").arg(rules.at(6).toHtmlEscaped()) + "</li>";
 
         out += "<li>" + tr("first character can %1 be a punctuation mark").arg((rules.at(5).toInt() > 0) ? "" : tr("NOT")) + "</li>";
+
+        if (rules.size() == 9)
+        {
+            if (rules.at(7).size() > 0)
+                out += "<li>" + tr("can not contain any of the following words: %1").arg(rules.at(7).toHtmlEscaped()) + "</li>";
+
+            if (rules.at(8).size() > 0)
+                out += "<li>" + tr("can not match any of the following expressions: %1").arg(rules.at(8).toHtmlEscaped()) + "</li>";
+        }
+
         out += "</ul>";
     }
     else
@@ -428,8 +446,11 @@ void MainWindow::registerError(Response::ResponseCode r, QString reasonStr, quin
         case Response::RespEmailRequiredToRegister:
             QMessageBox::critical(this, tr("Registration denied"), tr("It's mandatory to specify a valid email address when registering."));
             break;
+        case Response::RespEmailBlackListed:
+            QMessageBox::critical(this, tr("Registration denied"), tr("The email address provider used during registration has been blacklisted for use on this server."));
+            break;
         case Response::RespTooManyRequests:
-            QMessageBox::critical(this, tr("Registration denied"), tr("Too many registration attempts from your IP address."));
+            QMessageBox::critical(this, tr("Registration denied"), tr("Too many registration attempts, please try again later or contact the server operator for further details."));
             break;
         case Response::RespPasswordTooShort:
             QMessageBox::critical(this, tr("Registration denied"), tr("Password too short."));
@@ -488,6 +509,9 @@ void MainWindow::setClientStatusTitle()
         case StatusDisconnected: setWindowTitle(appName + " - " + tr("Disconnected")); break;
         case StatusLoggingIn: setWindowTitle(appName + " - " + tr("Connected, logging in at %1").arg(client->peerName())); break;
         case StatusLoggedIn: setWindowTitle(client->getUserName() + "@" + client->peerName()); break;
+        case StatusRequestingForgotPassword: setWindowTitle(appName + " - " + tr("Requesting forgot password to %1 as %2...").arg(client->peerName()).arg(client->getUserName())); break;
+        case StatusSubmitForgotPasswordChallenge: setWindowTitle(appName + " - " + tr("Requesting forgot password to %1 as %2...").arg(client->peerName()).arg(client->getUserName())); break;
+        case StatusSubmitForgotPasswordReset: setWindowTitle(appName + " - " + tr("Requesting forgot password to %1 as %2...").arg(client->peerName()).arg(client->getUserName())); break;
         default: setWindowTitle(appName);
     }
 }
@@ -516,7 +540,7 @@ void MainWindow::retranslateUi()
     dbMenu->setTitle(tr("C&ard Database"));
     aOpenCustomFolder->setText(tr("Open custom image folder"));
     aOpenCustomsetsFolder->setText(tr("Open custom sets folder"));
-    aAddCustomSet->setText(tr("Add custom sets/cards"));    
+    aAddCustomSet->setText(tr("Add custom sets/cards"));
     aEditSets->setText(tr("&Edit sets..."));
     aEditTokens->setText(tr("Edit &tokens..."));
 
@@ -648,6 +672,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(client, SIGNAL(registerError(Response::ResponseCode, QString, quint32)), this, SLOT(registerError(Response::ResponseCode, QString, quint32)));
     connect(client, SIGNAL(activateAccepted()), this, SLOT(activateAccepted()));
     connect(client, SIGNAL(activateError()), this, SLOT(activateError()));
+    connect(client, SIGNAL(sigForgotPasswordSuccess()), this, SLOT(forgotPasswordSuccess()));
+    connect(client, SIGNAL(sigForgotPasswordError()), this, SLOT(forgotPasswordError()));
+    connect(client, SIGNAL(sigPromptForForgotPasswordReset()), this, SLOT(promptForgotPasswordReset()));
+    connect(client, SIGNAL(sigPromptForForgotPasswordChallenge()), this, SLOT(promptForgotPasswordChallenge()));
 
     clientThread = new QThread(this);
     client->moveToThread(clientThread);
@@ -686,8 +714,11 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    trayIcon->hide();
-    trayIcon->deleteLater();
+    if (trayIcon) {
+        trayIcon->hide();
+        trayIcon->deleteLater();
+    }
+
     client->deleteLater();
     clientThread->wait();
 }
@@ -714,6 +745,13 @@ void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason) {
             QApplication::setActiveWindow(this);
         }
     }
+}
+
+void MainWindow::promptForgotPasswordChallenge()
+{
+    DlgForgotPasswordChallenge dlg(this);
+    if (dlg.exec())
+        client->submitForgotPasswordChallengeToServer(dlg.getHost(),dlg.getPort(),dlg.getPlayerName(),dlg.getEmail());
 }
 
 
@@ -939,7 +977,7 @@ void MainWindow::refreshShortcuts()
 
 void MainWindow::notifyUserAboutUpdate()
 {
-    QMessageBox::information(this, tr("Information"), tr("Your client appears to be missing features that the server supports.\nThis usually means that your client version is out of date, please check to see if there is a new client available for download."));
+    QMessageBox::information(this, tr("Information"), tr("This server supports additional features that your client doesn't have.\nThis is most likely not a problem, but this message might mean there is a new version of Cockatrice available or this server is running a custom or pre-release version.\n\nTo update your client, go to Help -> Update Cockatrice."));
 }
 
 void MainWindow::actOpenCustomFolder()
@@ -1035,4 +1073,35 @@ void MainWindow::actEditTokens()
     DlgEditTokens dlg;
     dlg.exec();
     db->saveCustomTokensToFile();
+}
+
+void MainWindow::actForgotPasswordRequest()
+{
+    DlgForgotPasswordRequest dlg(this);
+    if (dlg.exec())
+        client->requestForgotPasswordToServer(dlg.getHost(), dlg.getPort(), dlg.getPlayerName());
+}
+
+void MainWindow::forgotPasswordSuccess()
+{
+    QMessageBox::information(this, tr("Forgot Password"), tr("Your password has been reset successfully, you now may  log in using the new credentials."));
+    settingsCache->servers().setFPHostName("");
+    settingsCache->servers().setFPPort("");
+    settingsCache->servers().setFPPlayerName("");
+}
+
+void MainWindow::forgotPasswordError()
+{
+    QMessageBox::warning(this, tr("Forgot Password"), tr("Failed to reset user account password, please contact the server operator to reset your password."));
+    settingsCache->servers().setFPHostName("");
+    settingsCache->servers().setFPPort("");
+    settingsCache->servers().setFPPlayerName("");
+}
+
+void MainWindow::promptForgotPasswordReset()
+{
+    QMessageBox::information(this, tr("Forgot Password"), tr("Activation request received, please check your email for an activation token."));
+    DlgForgotPasswordReset dlg(this);
+    if (dlg.exec())
+        client->submitForgotPasswordResetToServer(dlg.getHost(), dlg.getPort(), dlg.getPlayerName(), dlg.getToken(), dlg.getPassword());
 }

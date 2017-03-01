@@ -24,7 +24,6 @@
 #include "settingscache.h"
 #include "main.h"
 #include "lineeditcompleter.h"
-
 #include "get_pb_extension.h"
 #include "pb/room_commands.pb.h"
 #include "pb/serverinfo_room.pb.h"
@@ -274,8 +273,10 @@ void TabRoom::processRoomSayEvent(const Event_RoomSay &event)
 
     UserListTWI *twi = userList->getUsers().value(senderName);
     UserLevelFlags userLevel;
+    QString userPrivLevel;
     if (twi) {
         userLevel = UserLevelFlags(twi->getUserInfo().user_level());
+        userPrivLevel = QString::fromStdString(twi->getUserInfo().privlevel());
         if (settingsCache->getIgnoreUnregisteredUsers() && !userLevel.testFlag(ServerInfo_User::IsRegistered))
             return;
     }
@@ -287,7 +288,7 @@ void TabRoom::processRoomSayEvent(const Event_RoomSay &event)
         message = "[" + QString(QDateTime::fromMSecsSinceEpoch(event.time_of()).toLocalTime().toString("d MMM yyyy HH:mm:ss")) + "] " + message;
 
 
-    chatView->appendMessage(message, event.message_type(), senderName, userLevel, true);
+    chatView->appendMessage(message, event.message_type(), senderName, userLevel, userPrivLevel, true);
     emit userEvent(false);
 }
 

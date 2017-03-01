@@ -58,11 +58,16 @@ public:
     void removeClient(Server_ProtocolHandler *player);
     QList<QString> getOnlineModeratorList();
     virtual QString getLoginMessage() const { return QString(); }
+    virtual QString getRequiredFeatures() const { return QString(); }
     virtual bool permitUnregisteredUsers() const { return true; }
     virtual bool getGameShouldPing() const { return false; }
-    virtual bool getClientIdRequired() const { return false; }
-    virtual bool getRegOnlyServer() const { return false; }
-    virtual int getPingClockInterval() const { return 0; }
+    virtual bool getClientIDRequiredEnabled() const { return false; }
+    virtual bool getRegOnlyServerEnabled() const { return false; }
+    virtual bool getMaxUserLimitEnabled() const { return false; }
+    virtual bool getEnableLogQuery() const { return false; }
+    virtual bool getStoreReplaysEnabled() const { return true; }
+    virtual int getIdleClientTimeout() const { return 0; }
+    virtual int getClientKeepAlive() const { return 0; }
     virtual int getMaxGameInactivityTime() const { return 9999999; }
     virtual int getMaxPlayerInactivityTime() const { return 9999999; }
     virtual int getMessageCountingInterval() const { return 0; }
@@ -71,6 +76,8 @@ public:
     virtual int getMaxGamesPerUser() const { return 0; }
     virtual int getCommandCountingInterval() const { return 0; }
     virtual int getMaxCommandCountPerInterval() const { return 0; }
+    virtual int getMaxUserTotal() const { return 9999999; }
+    virtual int getServerID() const { return 0; }
 
     Server_DatabaseInterface *getDatabaseInterface() const;
     int getNextLocalGameId() { QMutexLocker locker(&nextLocalGameIdMutex); return ++nextLocalGameId; }
@@ -89,10 +96,14 @@ public:
     void addPersistentPlayer(const QString &userName, int roomId, int gameId, int playerId);
     void removePersistentPlayer(const QString &userName, int roomId, int gameId, int playerId);
     QList<PlayerReference> getPersistentPlayerReferences(const QString &userName) const;
+    int getUsersCount() const;
+    int getGamesCount() const;
+    int getTCPUserCount() const { return tcpUserCount; }
+    int getWebSocketUserCount() const { return webSocketUserCount; }
 private:
     QMultiMap<QString, PlayerReference> persistentPlayers;
     mutable QReadWriteLock persistentPlayersLock;
-    int nextLocalGameId;
+    int nextLocalGameId, tcpUserCount, webSocketUserCount;
     QMutex nextLocalGameIdMutex;
 
 protected slots:
@@ -118,9 +129,6 @@ protected:
     QMap<QString, Server_AbstractUserInterface *> externalUsers;
     QMap<int, Server_Room *> rooms;
     QMap<QThread *, Server_DatabaseInterface *> databaseInterfaces;
-
-    int getUsersCount() const;
-    int getGamesCount() const;
     void addRoom(Server_Room *newRoom);
 };
 
