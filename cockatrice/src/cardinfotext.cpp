@@ -23,23 +23,7 @@ CardInfoText::CardInfoText(QWidget *parent) : QFrame(parent), info(nullptr)
 
     retranslateUi();
 }
-// Reset every label which is optionally hidden
-void CardInfoText::resetLabels()
-{
-    nameLabel1->show();
-    nameLabel2->show();
-    manacostLabel1->show();
-    manacostLabel2->show();
-    colorLabel1->show();
-    colorLabel2->show();
-    cardtypeLabel1->show();
-    cardtypeLabel2->show();
-    powtoughLabel1->show();
-    powtoughLabel2->show();
-    loyaltyLabel1->show();
-    loyaltyLabel2->show();
-    textLabel->show();
-}
+
 void CardInfoText::setCard(CardInfoPtr card)
 {
     if(card)
@@ -89,10 +73,8 @@ void CardInfoText::setCard(CardInfoPtr card)
 
 void CardInfoText::setInvalidCardName(const QString &cardName)
 {
-    nameLabel1->setText(tr("Unknown card:"));
-    nameLabel1->show();
-    nameLabel2->setText(cardName);
-    nameLabel2->show();
+    nameLabel->setText(tr("Unknown card:") + " " + cardName);
+    textLabel->setText("");
 }
 
 void CardInfoText::retranslateUi()

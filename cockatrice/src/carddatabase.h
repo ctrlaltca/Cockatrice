@@ -319,7 +319,7 @@ public:
     {
         return properties.value("colors").toStringList();
     }
-    int getMuId(const QString &set) const
+    int getMuId() const
     {
         return properties.value("muid").toInt();
     }

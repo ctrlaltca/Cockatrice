@@ -412,19 +412,6 @@ void CardDatabase::addCard(CardInfoPtr card)
         return;
     }
 
-    // if card already exists just add the new set property
-    if (cards.contains(card->getName())) {
-        CardInfoPtr sameCard = cards[card->getName()];
-        for (auto set : card->getSets()) {
-            QString setName = set->getCorrectedShortName();
-            sameCard->setSet(set);
-            sameCard->setMuId(setName, card->getMuId(setName));
-            sameCard->setRarity(setName, card->getRarity(setName));
-            sameCard->setSetNumber(setName, card->getCollectorNumber(setName));
-        }
-        return;
-    }
-
     addCardMutex->lock();
     cards.insert(card->getName(), card);
     simpleNameCards.insert(card->getSimpleName(), card);
@@ -699,7 +686,7 @@ bool CardDatabase::saveCustomTokensToFile()
     CardSetPtr customTokensSet = getSet(CardDatabase::TOKENS_SETNAME);
     tmpSets.insert(CardDatabase::TOKENS_SETNAME, customTokensSet);
 
-    CardNameMap tmpCards;
+    CardStringMap tmpCards;
     for (CardInfoPtr card : cards) {
         if (card->getSet() == customTokensSet) {
             tmpCards.insert(card->getName(), card);

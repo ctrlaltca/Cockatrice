@@ -15,9 +15,6 @@ private:
     QLabel *nameLabel;
     QTextEdit *textLabel;
     CardInfoPtr info;
-
-    void resetLabels();
-
 public:
     CardInfoText(QWidget *parent = 0);
     void retranslateUi();

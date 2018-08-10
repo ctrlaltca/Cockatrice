@@ -4,6 +4,8 @@
 #include <QFile>
 #include <QXmlStreamReader>
 
+typedef QMap<QString, QString> QStringMap;
+
 #define COCKATRICE_XML3_TAGNAME "cockatrice_carddatabase"
 #define COCKATRICE_XML3_TAGVER 3
 
@@ -128,55 +130,57 @@ void CockatriceXml3Parser::loadCardsFromXml(QXmlStreamReader &xml)
         }
 
         if (xml.name() == "card") {
-            QString name, manacost, cmc, type, pt, text, loyalty;
-            QStringList colors;
+            QString setName, hash, name, type, text, picurl;
             QList<CardRelation *> relatedCards, reverseRelatedCards;
-            QStringMap customPicURLs;
-            MuidMap muids;
-            QStringMap collectorNumbers, rarities;
+            QVariantHash properties;
+            QHash<QString, QVariantHash> setProperties;
             SetList sets;
             int tableRow = 0;
             bool cipt = false;
             bool isToken = false;
             bool upsideDown = false;
+            QStringList colors;
+
             while (!xml.atEnd()) {
                 if (xml.readNext() == QXmlStreamReader::EndElement) {
                     break;
                 }
 
-                if (xml.name() == "name") {
+                if (xml.name() == "hash") {
+                    hash = xml.readElementText();
+                } else if (xml.name() == "name") {
                     name = xml.readElementText();
-                } else if (xml.name() == "manacost") {
-                    manacost = xml.readElementText();
-                } else if (xml.name() == "cmc") {
-                    cmc = xml.readElementText();
-                } else if (xml.name() == "type") {
-                    type = xml.readElementText();
-                } else if (xml.name() == "pt") {
-                    pt = xml.readElementText();
                 } else if (xml.name() == "text") {
                     text = xml.readElementText();
+                } else if (xml.name() == "type") {
+                    type = xml.readElementText();
                 } else if (xml.name() == "set") {
                     QXmlStreamAttributes attrs = xml.attributes();
                     QString setName = xml.readElementText();
                     sets.append(internalAddSet(setName));
+                    setProperties[setName] = QVariantHash();
                     if (attrs.hasAttribute("muId")) {
-                        muids[setName] = attrs.value("muId").toString().toInt();
+                        setProperties[setName]["muId"] = attrs.value("muId").toString().toInt();
                     }
 
                     if (attrs.hasAttribute("picURL")) {
-                        customPicURLs[setName] = attrs.value("picURL").toString();
+                        setProperties[setName]["picURL"] = attrs.value("picURL").toString();
                     }
 
                     if (attrs.hasAttribute("num")) {
-                        collectorNumbers[setName] = attrs.value("num").toString();
+                        setProperties[setName]["num"] = attrs.value("num").toString();
                     }
 
                     if (attrs.hasAttribute("rarity")) {
-                        rarities[setName] = attrs.value("rarity").toString();
+                        setProperties[setName]["rarity"] = attrs.value("rarity").toString();
                     }
-                } else if (xml.name() == "color") {
-                    colors << xml.readElementText();
+                } else if (xml.name() == "manacost" ||
+                    xml.name() == "cmc" ||
+                    xml.name() == "pt" ||
+                    xml.name() == "loyalty" ||
+                    xml.name() == "color")
+                {
+                    properties.insert(xml.name().toString(), xml.readElementText());
                 } else if (xml.name() == "related" || xml.name() == "reverse-related") {
                     bool attach = false;
                     bool exclude = false;
@@ -219,8 +223,6 @@ void CockatriceXml3Parser::loadCardsFromXml(QXmlStreamReader &xml)
                     cipt = (xml.readElementText() == "1");
                 } else if (xml.name() == "upsidedown") {
                     upsideDown = (xml.readElementText() == "1");
-                } else if (xml.name() == "loyalty") {
-                    loyalty = xml.readElementText();
                 } else if (xml.name() == "token") {
                     isToken = static_cast<bool>(xml.readElementText().toInt());
                 } else if (xml.name() != "") {
@@ -230,10 +232,17 @@ void CockatriceXml3Parser::loadCardsFromXml(QXmlStreamReader &xml)
                 }
             }
 
-            CardInfoPtr newCard = CardInfo::newInstance(
-                name, isToken, manacost, cmc, type, pt, text, colors, relatedCards, reverseRelatedCards, upsideDown,
-                loyalty, cipt, tableRow, sets, customPicURLs, muids, collectorNumbers, rarities);
-            emit addCard(newCard);
+            foreach(CardSetPtr set, sets)
+            {
+                QVariantHash allProperties = setProperties[set->getShortName()];
+                allProperties.unite(properties);
+                QString picUrl = allProperties.take("picURL").toString();
+
+                CardInfoPtr newCard = CardInfo::newInstance(
+                    set, hash, name, isToken, allProperties, type, text, picUrl, relatedCards, reverseRelatedCards,
+                    upsideDown, cipt, tableRow);
+                emit addCard(newCard);
+            }
         }
     }
 }
@@ -264,30 +273,31 @@ static QXmlStreamWriter &operator<<(QXmlStreamWriter &xml, const CardInfoPtr &in
 
     xml.writeStartElement("card");
     xml.writeTextElement("name", info->getName());
+    xml.writeTextElement("hash", info->getHash());
 
-    const SetList &sets = info->getSets();
+    const CardSetPtr set = info->getSet();
     QString tmpString;
     QString tmpSet;
-    for (int i = 0; i < sets.size(); i++) {
-        xml.writeStartElement("set");
 
-        tmpSet = sets[i]->getShortName();
-        xml.writeAttribute("rarity", info->getRarity(tmpSet));
-        xml.writeAttribute("muId", QString::number(info->getMuId(tmpSet)));
+    xml.writeStartElement("set");
 
-        tmpString = info->getCollectorNumber(tmpSet);
-        if (!tmpString.isEmpty()) {
-            xml.writeAttribute("num", info->getCollectorNumber(tmpSet));
-        }
+    tmpSet = set->getShortName();
+    xml.writeAttribute("rarity", info->getRarity());
+    xml.writeAttribute("muId", QString::number(info->getMuId()));
 
-        tmpString = info->getCustomPicURL(tmpSet);
-        if (!tmpString.isEmpty()) {
-            xml.writeAttribute("picURL", tmpString);
-        }
-
-        xml.writeCharacters(tmpSet);
-        xml.writeEndElement();
+    tmpString = info->getCollectorNumber();
+    if (!tmpString.isEmpty()) {
+        xml.writeAttribute("num", info->getCollectorNumber());
     }
+
+    tmpString = info->getCustomPicURL();
+    if (!tmpString.isEmpty()) {
+        xml.writeAttribute("picURL", tmpString);
+    }
+
+    xml.writeCharacters(tmpSet);
+    xml.writeEndElement();
+
     const QStringList &colors = info->getColors();
     for (int i = 0; i < colors.size(); i++) {
         xml.writeTextElement("color", colors[i]);
@@ -364,7 +374,7 @@ static QXmlStreamWriter &operator<<(QXmlStreamWriter &xml, const CardInfoPtr &in
     return xml;
 }
 
-bool CockatriceXml3Parser::saveToFile(SetNameMap sets, CardNameMap cards, const QString &fileName)
+bool CockatriceXml3Parser::saveToFile(SetNameMap sets, CardStringMap cards, const QString &fileName)
 {
     QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly)) {
