@@ -23,9 +23,9 @@
 #include "main.h"
 #include "oracleimporter.h"
 #include "oraclewizard.h"
+#include "qt-json/json.h"
 #include "settingscache.h"
 #include "version_string.h"
-#include "qt-json/json.h"
 
 #ifdef HAS_LZMA
 #include "lzma/decompress.h"
@@ -253,7 +253,8 @@ void LoadSetsPage::initializePage()
     progressBar->hide();
 
     connect(wizard()->importer, SIGNAL(readFinished(int)), this, SLOT(importFinished(int)), Qt::UniqueConnection);
-    connect(&QtJson::Json::watcher, SIGNAL(progress(int, int)), this, SLOT(readProgress(int, int)), Qt::UniqueConnection);
+    connect(&QtJson::Json::watcher, SIGNAL(progress(int, int)), this, SLOT(readProgress(int, int)),
+            Qt::UniqueConnection);
 }
 
 void LoadSetsPage::retranslateUi()
@@ -426,7 +427,8 @@ void LoadSetsPage::readSetsFromByteArray(QByteArray data)
             return;
         }
 
-        QMetaObject::invokeMethod(wizard()->importer, "readSetsFromByteArray", Q_ARG(const QByteArray &, outBuffer->data()));
+        QMetaObject::invokeMethod(wizard()->importer, "readSetsFromByteArray",
+                                  Q_ARG(const QByteArray &, outBuffer->data()));
         data.clear();
         delete inBuffer;
         delete outBuffer;
@@ -469,7 +471,8 @@ void LoadSetsPage::readSetsFromByteArray(QByteArray data)
             return;
         }
 
-        QMetaObject::invokeMethod(wizard()->importer, "readSetsFromByteArray", Q_ARG(const QByteArray &, outBuffer->data()));
+        QMetaObject::invokeMethod(wizard()->importer, "readSetsFromByteArray",
+                                  Q_ARG(const QByteArray &, outBuffer->data()));
         data.clear();
         delete inBuffer;
         delete outBuffer;
