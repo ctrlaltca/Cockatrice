@@ -53,8 +53,8 @@ if(APPLE)
 ENDIF(APPLE)
 
 # Qt5
-find_package(Qt5 COMPONENTS Concurrent Network Svg Widgets REQUIRED)
-set(ORACLE_QT_MODULES Qt5::Concurrent Qt5::Network Qt5::Svg Qt5::Widgets)
+find_package(Qt5 COMPONENTS Network Svg Widgets REQUIRED)
+set(ORACLE_QT_MODULES Qt5::Network Qt5::Svg Qt5::Widgets)
 
 # Qt5LinguistTools
 find_package(Qt5LinguistTools)

@@ -103,13 +103,17 @@ private:
                         QList<CardRelation *> &relatedCards,
                         CardInfoPerSet setInfo);
 signals:
+    void readFinished(int setsNum);
     void setIndexChanged(int cardsImported, int setIndex, const QString &setName);
     void dataReadProgress(int bytesRead, int totalBytes);
 
+public slots:
+    void readSetsFromByteArray(const QByteArray &data);
+    void clear();
+    int startImport();
+
 public:
     explicit OracleImporter(const QString &_dataDir, QObject *parent = nullptr);
-    bool readSetsFromByteArray(const QByteArray &data);
-    int startImport();
     bool saveToFile(const QString &fileName);
     int importCardsFromSet(CardSetPtr currentSet, const QList<QVariant> &cards);
     QList<SetToDownload> &getSets()
@@ -120,7 +124,6 @@ public:
     {
         return dataDir;
     }
-    void clear();
 
 protected:
     inline QString getStringPropertyFromMap(QVariantMap card, QString propertyName);

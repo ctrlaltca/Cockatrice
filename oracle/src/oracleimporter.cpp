@@ -19,15 +19,16 @@ OracleImporter::OracleImporter(const QString &_dataDir, QObject *parent) : CardD
 {
 }
 
-bool OracleImporter::readSetsFromByteArray(const QByteArray &data)
+void OracleImporter::readSetsFromByteArray(const QByteArray &data)
 {
     QList<SetToDownload> newSetList;
 
     bool ok;
-    setsMap = QtJson::Json::parse(QString(data), ok).toMap();
+    setsMap = QtJson::Json::parse(data, ok).toMap();
     if (!ok) {
         qDebug() << "error: QtJson::Json::parse()";
-        return false;
+        emit readFinished(0);
+        return;
     }
 
     QListIterator<QVariant> it(setsMap.values());
@@ -71,12 +72,9 @@ bool OracleImporter::readSetsFromByteArray(const QByteArray &data)
     }
 
     qSort(newSetList);
-
-    if (newSetList.isEmpty()) {
-        return false;
-    }
     allSets = newSetList;
-    return true;
+
+    emit readFinished(newSetList.size());
 }
 
 QString OracleImporter::getMainCardType(const QStringList &typeList)

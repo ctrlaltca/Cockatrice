@@ -17,7 +17,7 @@
 #include <QScrollBar>
 #include <QStandardPaths>
 #include <QTextEdit>
-#include <QtConcurrent>
+#include <QThread>
 #include <QtGui>
 
 #include "main.h"
@@ -25,6 +25,7 @@
 #include "oraclewizard.h"
 #include "settingscache.h"
 #include "version_string.h"
+#include "qt-json/json.h"
 
 #ifdef HAS_LZMA
 #include "lzma/decompress.h"
@@ -55,7 +56,10 @@ OracleWizard::OracleWizard(QWidget *parent) : QWizard(parent)
     settings = new QSettings(settingsCache->getSettingsPath() + "global.ini", QSettings::IniFormat, this);
     connect(settingsCache, SIGNAL(langChanged()), this, SLOT(updateLanguage()));
 
-    importer = new OracleImporter(settingsCache->getDataPath(), this);
+    importer = new OracleImporter(settingsCache->getDataPath());
+    importerThread = new QThread(this);
+    importer->moveToThread(importerThread);
+    importerThread->start();
 
     nam = new QNetworkAccessManager(this);
 
@@ -71,6 +75,12 @@ OracleWizard::OracleWizard(QWidget *parent) : QWizard(parent)
     }
 
     retranslateUi();
+}
+
+OracleWizard::~OracleWizard()
+{
+    importer->deleteLater();
+    importerThread->quit();
 }
 
 void OracleWizard::updateLanguage()
@@ -203,7 +213,7 @@ void OutroPage::retranslateUi()
                 tr("If the card databases don't reload automatically, restart the Cockatrice client."));
 }
 
-LoadSetsPage::LoadSetsPage(QWidget *parent) : OracleWizardPage(parent)
+LoadSetsPage::LoadSetsPage(QWidget *parent) : OracleWizardPage(parent), readSetsNum(0)
 {
     urlRadioButton = new QRadioButton(this);
     fileRadioButton = new QRadioButton(this);
@@ -232,8 +242,6 @@ LoadSetsPage::LoadSetsPage(QWidget *parent) : OracleWizardPage(parent)
     layout->addWidget(progressLabel, 4, 0);
     layout->addWidget(progressBar, 4, 1);
 
-    connect(&watcher, SIGNAL(finished()), this, SLOT(importFinished()));
-
     setLayout(layout);
 }
 
@@ -243,6 +251,9 @@ void LoadSetsPage::initializePage()
 
     progressLabel->hide();
     progressBar->hide();
+
+    connect(wizard()->importer, SIGNAL(readFinished(int)), this, SLOT(importFinished(int)), Qt::UniqueConnection);
+    connect(&QtJson::Json::watcher, SIGNAL(progress(int, int)), this, SLOT(readProgress(int, int)), Qt::UniqueConnection);
 }
 
 void LoadSetsPage::retranslateUi()
@@ -291,7 +302,7 @@ void LoadSetsPage::actLoadSetsFile()
 bool LoadSetsPage::validatePage()
 {
     // once the import is finished, we call next(); skip validation
-    if (wizard()->importer->getSets().count() > 0) {
+    if (readSetsNum > 0) {
         return true;
     }
 
@@ -415,8 +426,10 @@ void LoadSetsPage::readSetsFromByteArray(QByteArray data)
             return;
         }
 
-        future = QtConcurrent::run(wizard()->importer, &OracleImporter::readSetsFromByteArray, outBuffer->data());
-        watcher.setFuture(future);
+        QMetaObject::invokeMethod(wizard()->importer, "readSetsFromByteArray", Q_ARG(const QByteArray &, outBuffer->data()));
+        data.clear();
+        delete inBuffer;
+        delete outBuffer;
         return;
 #else
         zipDownloadFailed(tr("Sorry, this version of Oracle does not support xz compressed files."));
@@ -456,8 +469,10 @@ void LoadSetsPage::readSetsFromByteArray(QByteArray data)
             return;
         }
 
-        future = QtConcurrent::run(wizard()->importer, &OracleImporter::readSetsFromByteArray, outBuffer->data());
-        watcher.setFuture(future);
+        QMetaObject::invokeMethod(wizard()->importer, "readSetsFromByteArray", Q_ARG(const QByteArray &, outBuffer->data()));
+        data.clear();
+        delete inBuffer;
+        delete outBuffer;
         return;
 #else
         zipDownloadFailed(tr("Sorry, this version of Oracle does not support zipped files."));
@@ -470,8 +485,8 @@ void LoadSetsPage::readSetsFromByteArray(QByteArray data)
 #endif
     }
     // Start the computation.
-    future = QtConcurrent::run(wizard()->importer, &OracleImporter::readSetsFromByteArray, data);
-    watcher.setFuture(future);
+    QMetaObject::invokeMethod(wizard()->importer, "readSetsFromByteArray", Q_ARG(const QByteArray &, data));
+    data.clear();
 }
 
 void LoadSetsPage::zipDownloadFailed(const QString &message)
@@ -494,14 +509,22 @@ void LoadSetsPage::zipDownloadFailed(const QString &message)
     }
 }
 
-void LoadSetsPage::importFinished()
+void LoadSetsPage::readProgress(int value, int tot)
 {
+    progressBar->setMinimum(0);
+    progressBar->setMaximum(tot);
+    progressBar->setValue(value);
+}
+
+void LoadSetsPage::importFinished(int setsNum)
+{
+    readSetsNum = setsNum;
     wizard()->enableButtons();
     setEnabled(true);
     progressLabel->hide();
     progressBar->hide();
 
-    if (watcher.future().result()) {
+    if (readSetsNum > 0) {
         wizard()->next();
     } else {
         QMessageBox::critical(this, tr("Error"),
@@ -530,20 +553,18 @@ SaveSetsPage::SaveSetsPage(QWidget *parent) : OracleWizardPage(parent)
 
 void SaveSetsPage::cleanupPage()
 {
-    wizard()->importer->clear();
-    disconnect(wizard()->importer, SIGNAL(setIndexChanged(int, int, const QString &)), nullptr, nullptr);
+    QMetaObject::invokeMethod(wizard()->importer, "clear");
 }
 
 void SaveSetsPage::initializePage()
 {
     messageLog->clear();
+    wizard()->disableButtons();
 
     connect(wizard()->importer, SIGNAL(setIndexChanged(int, int, const QString &)), this,
-            SLOT(updateTotalProgress(int, int, const QString &)));
+            SLOT(updateTotalProgress(int, int, const QString &)), Qt::UniqueConnection);
 
-    if (!wizard()->importer->startImport()) {
-        QMessageBox::critical(this, tr("Error"), tr("No set has been imported."));
-    }
+    QMetaObject::invokeMethod(wizard()->importer, "startImport");
 }
 
 void SaveSetsPage::retranslateUi()
@@ -564,6 +585,7 @@ void SaveSetsPage::updateTotalProgress(int cardsImported, int /* setIndex */, co
     if (setName.isEmpty()) {
         messageLog->append("<b>" + tr("Import finished: %1 cards.").arg(wizard()->importer->getCardList().size()) +
                            "</b>");
+        wizard()->enableButtons();
     } else {
         messageLog->append(tr("%1: %2 cards imported").arg(setName).arg(cardsImported));
     }

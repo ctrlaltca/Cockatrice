@@ -1,11 +1,10 @@
 #ifndef ORACLEWIZARD_H
 #define ORACLEWIZARD_H
 
-#include <QFuture>
-#include <QFutureWatcher>
 #include <QWizard>
 #include <utility>
 
+class OracleImporter;
 class QCheckBox;
 class QGroupBox;
 class QComboBox;
@@ -16,8 +15,8 @@ class QProgressBar;
 class QNetworkAccessManager;
 class QTextEdit;
 class QVBoxLayout;
-class OracleImporter;
 class QSettings;
+class QThread;
 
 #include "pagetemplates.h"
 
@@ -26,6 +25,7 @@ class OracleWizard : public QWizard
     Q_OBJECT
 public:
     explicit OracleWizard(QWidget *parent = nullptr);
+    ~OracleWizard() override;
     void accept() override;
     void enableButtons();
     void disableButtons();
@@ -42,6 +42,7 @@ public:
 
 public:
     OracleImporter *importer;
+    QThread *importerThread;
     QSettings *settings;
     QNetworkAccessManager *nam;
 
@@ -106,16 +107,15 @@ private:
     QPushButton *fileButton;
     QLabel *progressLabel;
     QProgressBar *progressBar;
-
-    QFutureWatcher<bool> watcher;
-    QFuture<bool> future;
+    int readSetsNum;
 
 private slots:
     void actLoadSetsFile();
     void actRestoreDefaultUrl();
     void actDownloadProgressSetsFile(qint64 received, qint64 total);
     void actDownloadFinishedSetsFile();
-    void importFinished();
+    void readProgress(int value, int tot);
+    void importFinished(int setsNum);
     void zipDownloadFailed(const QString &message);
 };
 
