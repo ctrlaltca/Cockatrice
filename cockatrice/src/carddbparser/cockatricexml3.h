@@ -14,11 +14,11 @@ public:
     ~CockatriceXml3Parser() override = default;
     bool getCanParseFile(const QString &name, QIODevice &device) override;
     void parseFile(QIODevice &device) override;
-    bool saveToFile(SetNameMap sets,
-                    CardNameMap cards,
-                    const QString &fileName,
-                    const QString &sourceUrl = "unknown",
-                    const QString &sourceVersion = "unknown") override;
+    bool internalSaveToIODevice(SetNameMap sets,
+                                CardNameMap cards,
+                                QIODevice &device,
+                                const QString &sourceUrl,
+                                const QString &sourceVersion) override;
 
 private:
     void loadCardsFromXml(QXmlStreamReader &xml);

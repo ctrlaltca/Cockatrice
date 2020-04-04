@@ -2,7 +2,7 @@
 
 #include <QCoreApplication>
 #include <QDebug>
-#include <QFile>
+#include <QIODevice>
 #include <QXmlStreamReader>
 #include <version_string.h>
 
@@ -407,19 +407,13 @@ static QXmlStreamWriter &operator<<(QXmlStreamWriter &xml, const CardInfoPtr &in
     return xml;
 }
 
-bool CockatriceXml3Parser::saveToFile(SetNameMap sets,
-                                      CardNameMap cards,
-                                      const QString &fileName,
-                                      const QString &sourceUrl,
-                                      const QString &sourceVersion)
+bool CockatriceXml3Parser::internalSaveToIODevice(SetNameMap sets,
+                                                  CardNameMap cards,
+                                                  QIODevice &device,
+                                                  const QString &sourceUrl,
+                                                  const QString &sourceVersion)
 {
-    QFile file(fileName);
-    if (!file.open(QIODevice::WriteOnly)) {
-        return false;
-    }
-
-    QXmlStreamWriter xml(&file);
-
+    QXmlStreamWriter xml(&device);
     xml.setAutoFormatting(true);
     xml.writeStartDocument();
     xml.writeStartElement(COCKATRICE_XML3_TAGNAME);

@@ -19,7 +19,12 @@ public:
                             CardNameMap cards,
                             const QString &fileName,
                             const QString &sourceUrl = "unknown",
-                            const QString &sourceVersion = "unknown") = 0;
+                            const QString &sourceVersion = "unknown");
+    virtual bool saveToByteArray(SetNameMap sets,
+                                 CardNameMap cards,
+                                 QByteArray &byteArray,
+                                 const QString &sourceUrl = "unknown",
+                                 const QString &sourceVersion = "unknown");
     static void clearSetlist();
 
 protected:
@@ -33,6 +38,11 @@ protected:
                               const QString &longName = "",
                               const QString &setType = "",
                               const QDate &releaseDate = QDate());
+    virtual bool internalSaveToIODevice(SetNameMap sets,
+                                        CardNameMap cards,
+                                        QIODevice &device,
+                                        const QString &sourceUrl,
+                                        const QString &sourceVersion) = 0;
 signals:
     virtual void addCard(CardInfoPtr card) = 0;
     virtual void addSet(CardSetPtr set) = 0;

@@ -1,5 +1,8 @@
 #include "carddatabaseparser.h"
 
+#include <QBuffer>
+#include <QFile>
+
 SetNameMap ICardDatabaseParser::sets;
 
 void ICardDatabaseParser::clearSetlist()
@@ -24,4 +27,30 @@ CardSetPtr ICardDatabaseParser::internalAddSet(const QString &setName,
     sets.insert(setName, newSet);
     emit addSet(newSet);
     return newSet;
+}
+
+bool ICardDatabaseParser::saveToFile(SetNameMap sets,
+                                     CardNameMap cards,
+                                     const QString &fileName,
+                                     const QString &sourceUrl,
+                                     const QString &sourceVersion)
+{
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return false;
+    }
+
+    return internalSaveToIODevice(sets, cards, file, sourceUrl, sourceVersion);
+}
+
+bool ICardDatabaseParser::saveToByteArray(SetNameMap sets,
+                                          CardNameMap cards,
+                                          QByteArray &byteArray,
+                                          const QString &sourceUrl,
+                                          const QString &sourceVersion)
+{
+    byteArray.clear();
+    QBuffer buffer(&byteArray);
+    buffer.open(QBuffer::WriteOnly);
+    return internalSaveToIODevice(sets, cards, buffer, sourceUrl, sourceVersion);
 }
