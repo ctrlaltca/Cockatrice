@@ -30,12 +30,33 @@
  * \file json.cpp
  */
 
+/*
+ * Modified for usage in the Cockatrice project https://github.com/Cockatrice/Cockatrice:
+ * - use QByteArray instead of QString as base class for data
+ * - Added JsonWatcher class to monitor parsing progress
+ * - Added blacklisteObjects to speed up parsing by skipping heavy objects by key
+ */
+
 #include "json.h"
 #include <iostream>
 
 namespace QtJson
 {
 
+static QStringList blacklisteOdbjects = { "artist", "foreignData", "originalText", "prices", "printings", "purchaseUrls", "rulings" };
+
+JsonWatcher::JsonWatcher(): QObject(), lastPerc(0) { }
+
+void JsonWatcher::emitProgress(int value, int tot) {
+    int newPerc = value * 100 / tot;
+    if(newPerc != lastPerc)
+    {
+        lastPerc = newPerc;
+        emit progress(lastPerc, 100);
+    }
+};
+
+JsonWatcher Json::watcher;
 
 static QString sanitizeString(QString str)
 {
@@ -66,7 +87,7 @@ static QByteArray join(const QList<QByteArray> &list, const QByteArray &sep)
 /**
  * parse
  */
-QVariant Json::parse(const QString &json)
+QVariant Json::parse(const QByteArray &json)
 {
         bool success = true;
         return Json::parse(json, success);
@@ -75,19 +96,18 @@ QVariant Json::parse(const QString &json)
 /**
  * parse
  */
-QVariant Json::parse(const QString &json, bool &success)
+QVariant Json::parse(const QByteArray &json, bool &success)
 {
         success = true;
 
         //Return an empty QVariant if the JSON data is either null or empty
         if(!json.isNull() || !json.isEmpty())
         {
-                QString data = json;
                 //We'll start from index 0
                 int index = 0;
 
                 //Parse the first value
-                QVariant value = Json::parseValue(data, index, success);
+                QVariant value = Json::parseValue(json, index, success);
 
                 //Return the parsed value
                 return value;
@@ -225,7 +245,7 @@ QByteArray Json::serialize(const QVariant &data, bool &success)
 /**
  * parseValue
  */
-QVariant Json::parseValue(const QString &json, int &index, bool &success)
+QVariant Json::parseValue(const QByteArray &json, int &index, bool &success)
 {
         //Determine what kind of data we should parse by
         //checking out the upcoming token
@@ -260,7 +280,7 @@ QVariant Json::parseValue(const QString &json, int &index, bool &success)
 /**
  * parseObject
  */
-QVariant Json::parseObject(const QString &json, int &index, bool &success)
+QVariant Json::parseObject(const QByteArray &json, int &index, bool &success)
 {
         QVariantMap map;
         int token;
@@ -319,7 +339,9 @@ QVariant Json::parseObject(const QString &json, int &index, bool &success)
                         }
 
                         //Assign the value to the key in the map
-                        map[name] = value;
+                        if(!blacklisteOdbjects.contains(name)) {
+                            map[name] = value;
+                        }
                 }
         }
 
@@ -330,7 +352,7 @@ QVariant Json::parseObject(const QString &json, int &index, bool &success)
 /**
  * parseArray
  */
-QVariant Json::parseArray(const QString &json, int &index, bool &success)
+QVariant Json::parseArray(const QByteArray &json, int &index, bool &success)
 {
         QVariantList list;
 
@@ -374,7 +396,7 @@ QVariant Json::parseArray(const QString &json, int &index, bool &success)
 /**
  * parseString
  */
-QVariant Json::parseString(const QString &json, int &index, bool &success)
+QVariant Json::parseString(const QByteArray &json, int &index, bool &success)
 {
         QString s;
         QChar c;
@@ -477,7 +499,7 @@ QVariant Json::parseString(const QString &json, int &index, bool &success)
 /**
  * parseNumber
  */
-QVariant Json::parseNumber(const QString &json, int &index)
+QVariant Json::parseNumber(const QByteArray &json, int &index)
 {
         Json::eatWhitespace(json, index);
 
@@ -501,7 +523,7 @@ QVariant Json::parseNumber(const QString &json, int &index)
 /**
  * lastIndexOfNumber
  */
-int Json::lastIndexOfNumber(const QString &json, int index)
+int Json::lastIndexOfNumber(const QByteArray &json, int index)
 {
         static const QString numericCharacters("0123456789+-.eE");
         int lastIndex;
@@ -520,7 +542,7 @@ int Json::lastIndexOfNumber(const QString &json, int index)
 /**
  * eatWhitespace
  */
-void Json::eatWhitespace(const QString &json, int &index)
+void Json::eatWhitespace(const QByteArray &json, int &index)
 {
         static const QString whitespaceChars(" \t\n\r");
         for(; index < json.size(); index++)
@@ -535,7 +557,7 @@ void Json::eatWhitespace(const QString &json, int &index)
 /**
  * lookAhead
  */
-int Json::lookAhead(const QString &json, int index)
+int Json::lookAhead(const QByteArray &json, int index)
 {
         int saveIndex = index;
         return Json::nextToken(json, saveIndex);
@@ -544,7 +566,7 @@ int Json::lookAhead(const QString &json, int index)
 /**
  * nextToken
  */
-int Json::nextToken(const QString &json, int &index)
+int Json::nextToken(const QByteArray &json, int &index)
 {
         Json::eatWhitespace(json, index);
 
@@ -555,6 +577,9 @@ int Json::nextToken(const QString &json, int &index)
 
         QChar c = json[index];
         index++;
+
+        watcher.emitProgress(index >> 20, json.size() >> 20);
+
         switch(c.toLatin1())
         {
                 case '{': return JsonTokenCurlyOpen;

@@ -1,33 +1,40 @@
 /* Copyright 2011 Eeli Reilin. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
- * 1. Redistributions of source code must retain the above copyright notice, 
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation 
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY <COPYRIGHT HOLDER> ''AS IS'' AND ANY EXPRESS OR 
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO 
- * EVENT SHALL EELI REILIN OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+ * THIS SOFTWARE IS PROVIDED BY <COPYRIGHT HOLDER> ''AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+ * EVENT SHALL EELI REILIN OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
- * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * The views and conclusions contained in the software and documentation 
- * are those of the authors and should not be interpreted as representing 
+ * The views and conclusions contained in the software and documentation
+ * are those of the authors and should not be interpreted as representing
  * official policies, either expressed or implied, of Eeli Reilin.
  */
 
 /**
  * \file json.h
+ */
+
+/*
+ * Modified for usage in the Cockatrice project https://github.com/Cockatrice/Cockatrice:
+ * - use QByteArray instead of QString as base class for data
+ * - Added JsonWatcher class to monitor parsing progress
+ * - Added blacklisteObjects to speed up parsing by skipping heavy objects by key
  */
 
 #ifndef JSON_H
@@ -58,6 +65,18 @@ enum JsonToken
         JsonTokenNull = 11
 };
 
+class JsonWatcher : public QObject
+{
+    Q_OBJECT
+public:
+    JsonWatcher();
+    void emitProgress(int value, int tot);
+private:
+    int lastPerc;
+signals:
+    void progress(int value, int tot);
+};
+
 /**
  * \class Json
  * \brief A JSON data parser
@@ -67,12 +86,13 @@ enum JsonToken
 class Json
 {
         public:
+                static JsonWatcher watcher;
                 /**
                  * Parse a JSON string
                  *
                  * \param json The JSON data
                  */
-                static QVariant parse(const QString &json);
+                static QVariant parse(const QByteArray &json);
 
                 /**
                  * Parse a JSON string
@@ -80,7 +100,7 @@ class Json
                  * \param json The JSON data
                  * \param success The success of the parsing
                  */
-                static QVariant parse(const QString &json, bool &success);
+                static QVariant parse(const QByteArray &json, bool &success);
 
                 /**
                 * This method generates a textual JSON representation
@@ -110,7 +130,7 @@ class Json
                  *
                  * \return QVariant The parsed value
                  */
-                static QVariant parseValue(const QString &json, int &index,
+                static QVariant parseValue(const QByteArray &json, int &index,
                                                                    bool &success);
 
                 /**
@@ -122,7 +142,7 @@ class Json
                  *
                  * \return QVariant The parsed object map
                  */
-                static QVariant parseObject(const QString &json, int &index,
+                static QVariant parseObject(const QByteArray &json, int &index,
                                                                            bool &success);
 
                 /**
@@ -134,7 +154,7 @@ class Json
                  *
                  * \return QVariant The parsed variant array
                  */
-                static QVariant parseArray(const QString &json, int &index,
+                static QVariant parseArray(const QByteArray &json, int &index,
                                                                            bool &success);
 
                 /**
@@ -146,7 +166,7 @@ class Json
                  *
                  * \return QVariant The parsed string
                  */
-                static QVariant parseString(const QString &json, int &index,
+                static QVariant parseString(const QByteArray &json, int &index,
                                                                         bool &success);
 
                 /**
@@ -157,7 +177,7 @@ class Json
                  *
                  * \return QVariant The parsed number
                  */
-                static QVariant parseNumber(const QString &json, int &index);
+                static QVariant parseNumber(const QByteArray &json, int &index);
 
                 /**
                  * Get the last index of a number starting from index
@@ -167,7 +187,7 @@ class Json
                  *
                  * \return The last index of the number
                  */
-                static int lastIndexOfNumber(const QString &json, int index);
+                static int lastIndexOfNumber(const QByteArray &json, int index);
 
                 /**
                  * Skip unwanted whitespace symbols starting from index
@@ -175,7 +195,7 @@ class Json
                  * \param json The JSON data
                  * \param index The start index
                  */
-                static void eatWhitespace(const QString &json, int &index);
+                static void eatWhitespace(const QByteArray &json, int &index);
 
                 /**
                  * Check what token lies ahead
@@ -185,7 +205,7 @@ class Json
                  *
                  * \return int The upcoming token
                  */
-                static int lookAhead(const QString &json, int index);
+                static int lookAhead(const QByteArray &json, int index);
 
                 /**
                  * Get the next JSON token
@@ -195,7 +215,7 @@ class Json
                  *
                  * \return int The next JSON token
                  */
-                static int nextToken(const QString &json, int &index);
+                static int nextToken(const QByteArray &json, int &index);
 };
 
 
