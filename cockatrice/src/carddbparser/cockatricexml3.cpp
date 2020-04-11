@@ -42,7 +42,7 @@ bool CockatriceXml3Parser::getCanParseFile(const QString &fileName, QIODevice &d
     return true;
 }
 
-void CockatriceXml3Parser::parseFile(QIODevice &device)
+void CockatriceXml3Parser::parseFile(QIODevice &device, const QString &cardSourceType)
 {
     QXmlStreamReader xml(&device);
     while (!xml.atEnd()) {
@@ -52,7 +52,9 @@ void CockatriceXml3Parser::parseFile(QIODevice &device)
                     break;
                 }
 
-                if (xml.name() == "sets") {
+                if (xml.name() == "info") {
+                    loadInfoFromXml(xml, cardSourceType);
+                } else if (xml.name() == "sets") {
                     loadSetsFromXml(xml);
                 } else if (xml.name() == "cards") {
                     loadCardsFromXml(xml);
@@ -63,6 +65,34 @@ void CockatriceXml3Parser::parseFile(QIODevice &device)
             }
         }
     }
+}
+
+void CockatriceXml3Parser::loadInfoFromXml(QXmlStreamReader &xml, const QString &cardSourceType)
+{
+    CardSourceInfo info;
+    info.cardSourceType = cardSourceType;
+
+    while (!xml.atEnd()) {
+        if (xml.readNext() == QXmlStreamReader::EndElement) {
+            break;
+        }
+
+        if (xml.name() == "author") {
+            info.author = xml.readElementText(QXmlStreamReader::IncludeChildElements);
+        } else if (xml.name() == "createdAt") {
+            info.createdAt =
+                QDateTime::fromString(xml.readElementText(QXmlStreamReader::IncludeChildElements), Qt::ISODate);
+        } else if (xml.name() == "sourceUrl") {
+            info.sourceUrl = xml.readElementText(QXmlStreamReader::IncludeChildElements);
+        } else if (xml.name() == "sourceVersion") {
+            info.sourceVersion = xml.readElementText(QXmlStreamReader::IncludeChildElements);
+        } else if (xml.name() != "") {
+            qDebug() << "[CockatriceXml3Parser] Unknown info property" << xml.name()
+                     << ", trying to continue anyway";
+            xml.skipCurrentElement();
+        }
+    }
+    emit addInfo(info);
 }
 
 void CockatriceXml3Parser::loadSetsFromXml(QXmlStreamReader &xml)

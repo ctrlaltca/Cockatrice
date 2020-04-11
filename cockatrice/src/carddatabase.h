@@ -27,6 +27,16 @@ typedef QMap<QString, CardInfoPerSet> CardInfoPerSetMap;
 
 Q_DECLARE_METATYPE(CardInfoPtr)
 
+class CardSourceInfo
+{
+public:
+    QString cardSourceType;
+    QString author;
+    QDateTime createdAt;
+    QString sourceUrl;
+    QString sourceVersion;
+};
+
 class CardSet : public QList<CardInfoPtr>
 {
 private:
@@ -390,7 +400,7 @@ protected:
     LoadStatus loadStatus;
 
     QVector<ICardDatabaseParser *> availableParsers;
-
+    QVector<CardSourceInfo> cardSources;
 private:
     CardInfoPtr getCardFromMap(const CardNameMap &cardMap, const QString &cardName) const;
     void checkUnknownSets();
@@ -409,6 +419,9 @@ public:
     void removeCard(CardInfoPtr card);
     CardInfoPtr getCard(const QString &cardName) const;
     QList<CardInfoPtr> getCards(const QStringList &cardNames) const;
+    QVector<CardSourceInfo> getCardSources() const {
+        return cardSources;
+    };
 
     /*
      * Get a card by its simple name. The name will be simplified in this
@@ -422,7 +435,7 @@ public:
         return cards.values();
     }
     SetList getSetList() const;
-    LoadStatus loadFromFile(const QString &fileName);
+    LoadStatus loadFromFile(const QString &fileName, const QString cardSourceType);
     bool saveCustomTokensToFile();
     QStringList getAllMainCardTypes() const;
     LoadStatus getLoadStatus() const
@@ -437,8 +450,9 @@ public slots:
     LoadStatus loadCardDatabases();
     void addCard(CardInfoPtr card);
     void addSet(CardSetPtr set);
+    void addInfo(CardSourceInfo info);
 protected slots:
-    LoadStatus loadCardDatabase(const QString &path);
+    LoadStatus loadCardDatabase(const QString &path, const QString cardSourceType = QString());
 signals:
     void cardDatabaseLoadingFailed();
     void cardDatabaseNewSetsFound(int numUnknownSets, QStringList unknownSetsNames);

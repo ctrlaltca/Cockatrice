@@ -13,7 +13,7 @@ public:
     CockatriceXml4Parser() = default;
     ~CockatriceXml4Parser() override = default;
     bool getCanParseFile(const QString &name, QIODevice &device) override;
-    void parseFile(QIODevice &device) override;
+    void parseFile(QIODevice &device, const QString &cardSourceType) override;
     bool internalSaveToIODevice(SetNameMap sets,
                                 CardNameMap cards,
                                 QIODevice &device,
@@ -24,9 +24,11 @@ private:
     QVariantHash loadCardPropertiesFromXml(QXmlStreamReader &xml);
     void loadCardsFromXml(QXmlStreamReader &xml);
     void loadSetsFromXml(QXmlStreamReader &xml);
+    void loadInfoFromXml(QXmlStreamReader &xml, const QString &cardSourceType);
 signals:
     void addCard(CardInfoPtr card) override;
     void addSet(CardSetPtr set) override;
+    void addInfo(CardSourceInfo info) override;
 };
 
 #endif

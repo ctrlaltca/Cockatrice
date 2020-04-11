@@ -14,7 +14,7 @@ public:
     ~ICardDatabaseParser() override = default;
 
     virtual bool getCanParseFile(const QString &name, QIODevice &device) = 0;
-    virtual void parseFile(QIODevice &device) = 0;
+    virtual void parseFile(QIODevice &device, const QString &cardSourceType) = 0;
     virtual bool saveToFile(SetNameMap sets,
                             CardNameMap cards,
                             const QString &fileName,
@@ -46,6 +46,7 @@ protected:
 signals:
     virtual void addCard(CardInfoPtr card) = 0;
     virtual void addSet(CardSetPtr set) = 0;
+    virtual void addInfo(CardSourceInfo info) = 0;
 };
 
 Q_DECLARE_INTERFACE(ICardDatabaseParser, "ICardDatabaseParser")

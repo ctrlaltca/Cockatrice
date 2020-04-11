@@ -5,7 +5,6 @@
 #include "game_specific_terms.h"
 #include "pictureloader.h"
 #include "settingscache.h"
-#include "spoilerbackgroundupdater.h"
 
 #include <QCryptographicHash>
 #include <QDebug>
@@ -14,6 +13,10 @@
 #include <QMessageBox>
 #include <algorithm>
 #include <utility>
+
+#define CARDSOURCE_CARDS "c"
+#define CARDSOURCE_TOKENS "t"
+#define CARDSOURCE_SPOILERS "s"
 
 const char *CardDatabase::TOKENS_SETNAME = "TK";
 
@@ -335,6 +338,7 @@ CardDatabase::CardDatabase(QObject *parent) : QObject(parent), loadStatus(NotLoa
     for (auto &parser : availableParsers) {
         connect(parser, SIGNAL(addCard(CardInfoPtr)), this, SLOT(addCard(CardInfoPtr)), Qt::DirectConnection);
         connect(parser, SIGNAL(addSet(CardSetPtr)), this, SLOT(addSet(CardSetPtr)), Qt::DirectConnection);
+        connect(parser, SIGNAL(addInfo(CardSourceInfo)), this, SLOT(addInfo(CardSourceInfo)), Qt::DirectConnection);
     }
 
     connect(settingsCache, SIGNAL(cardDatabasePathChanged()), this, SLOT(loadCardDatabases()));
@@ -367,6 +371,11 @@ void CardDatabase::clear()
     loadStatus = NotLoaded;
 
     clearDatabaseMutex->unlock();
+}
+
+void CardDatabase::addInfo(CardSourceInfo info)
+{
+    cardSources.append(info);
 }
 
 void CardDatabase::addCard(CardInfoPtr card)
@@ -472,7 +481,7 @@ CardInfoPtr CardDatabase::getCardFromMap(const CardNameMap &cardMap, const QStri
     return {};
 }
 
-LoadStatus CardDatabase::loadFromFile(const QString &fileName)
+LoadStatus CardDatabase::loadFromFile(const QString &fileName, const QString cardSourceType)
 {
     QFile file(fileName);
     file.open(QIODevice::ReadOnly);
@@ -484,7 +493,7 @@ LoadStatus CardDatabase::loadFromFile(const QString &fileName)
         file.reset();
         if (parser->getCanParseFile(fileName, file)) {
             file.reset();
-            parser->parseFile(file);
+            parser->parseFile(file, cardSourceType);
             return Ok;
         }
     }
@@ -492,12 +501,12 @@ LoadStatus CardDatabase::loadFromFile(const QString &fileName)
     return Invalid;
 }
 
-LoadStatus CardDatabase::loadCardDatabase(const QString &path)
+LoadStatus CardDatabase::loadCardDatabase(const QString &path, const QString cardSourceType)
 {
     LoadStatus tempLoadStatus = NotLoaded;
     if (!path.isEmpty()) {
         loadFromFileMutex->lock();
-        tempLoadStatus = loadFromFile(path);
+        tempLoadStatus = loadFromFile(path, cardSourceType);
         loadFromFileMutex->unlock();
     }
 
@@ -515,9 +524,9 @@ LoadStatus CardDatabase::loadCardDatabases()
 
     clear(); // remove old db
 
-    loadStatus = loadCardDatabase(settingsCache->getCardDatabasePath()); // load main card database
-    loadCardDatabase(settingsCache->getTokenDatabasePath());             // load tokens database
-    loadCardDatabase(settingsCache->getSpoilerCardDatabasePath());       // load spoilers database
+    loadStatus = loadCardDatabase(settingsCache->getCardDatabasePath(), CARDSOURCE_CARDS);
+    loadCardDatabase(settingsCache->getTokenDatabasePath(), CARDSOURCE_TOKENS);
+    loadCardDatabase(settingsCache->getSpoilerDatabasePath(), CARDSOURCE_SPOILERS);
 
     // load custom card databases
     QDir dir(settingsCache->getCustomCardDatabasePath());
