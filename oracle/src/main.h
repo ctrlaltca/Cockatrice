@@ -7,7 +7,7 @@ class QString;
 extern QTranslator *translator;
 extern const QString translationPrefix;
 extern QString translationPath;
-extern bool isSpoilersOnly;
+extern bool updateCards, updateTokens, updateSpoilers;
 
 void installNewTranslator();
 

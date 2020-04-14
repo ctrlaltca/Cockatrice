@@ -37,7 +37,7 @@ QString SettingsCache::getTokenDatabasePath() const
 {
     return "";
 }
-QString SettingsCache::getSpoilerCardDatabasePath() const
+QString SettingsCache::getSpoilerDatabasePath() const
 {
     return "";
 }

@@ -116,7 +116,6 @@ SET(cockatrice_SOURCES
     src/logger.cpp
     src/releasechannel.cpp
     src/userconnection_information.cpp
-    src/spoilerbackgroundupdater.cpp
     src/handle_public_servers.cpp
     src/carddbparser/carddatabaseparser.cpp
     src/carddbparser/cockatricexml3.cpp
@@ -125,6 +124,7 @@ SET(cockatrice_SOURCES
     src/phase.cpp
     src/customlineedit.cpp
     src/translatecountername.cpp
+    src/cardupdater.cpp
     ${VERSION_STRING_CPP}
     )
 

@@ -30,6 +30,7 @@
 #include "dlg_tip_of_the_day.h"
 #include "dlg_update.h"
 #include "dlg_viewlog.h"
+#include "cardupdater.h"
 #include "localclient.h"
 #include "localserver.h"
 #include "localserverinterface.h"
@@ -769,7 +770,7 @@ void MainWindow::createMenus()
 }
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), localServer(nullptr), bHasActivated(false), cardUpdateProcess(nullptr),
+    : QMainWindow(parent), localServer(nullptr), bHasActivated(false),
       logviewDialog(nullptr)
 {
     connect(settingsCache, SIGNAL(pixmapCacheSizeChanged(int)), this, SLOT(pixmapCacheSizeChanged(int)));
@@ -1066,96 +1067,8 @@ void MainWindow::cardDatabaseAllNewSetsEnabled()
 /* CARD UPDATER */
 void MainWindow::actCheckCardUpdates()
 {
-    if (cardUpdateProcess) {
-        QMessageBox::information(this, tr("Information"), tr("A card database update is already running."));
-        return;
-    }
-
-    cardUpdateProcess = new QProcess(this);
-    connect(cardUpdateProcess, SIGNAL(error(QProcess::ProcessError)), this,
-            SLOT(cardUpdateError(QProcess::ProcessError)));
-    connect(cardUpdateProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this,
-            SLOT(cardUpdateFinished(int, QProcess::ExitStatus)));
-
-    // full "run the update" command; leave empty if not present
-    QString updaterCmd;
-    QString binaryName;
-    QDir dir = QDir(QApplication::applicationDirPath());
-
-#if defined(Q_OS_MAC)
-    /*
-     * bypass app translocation: quarantined application will be started from a temporary directory eg.
-     * /private/var/folders/tk/qx76cyb50jn5dvj7rrgfscz40000gn/T/AppTranslocation/A0CBBD5A-9264-4106-8547-36B84DB161E2/d/oracle/
-     */
-    if (dir.absolutePath().startsWith("/private/var/folders")) {
-        dir.setPath("/Applications/");
-    } else {
-        // exit from the Cockatrice application bundle
-        dir.cdUp();
-        dir.cdUp();
-        dir.cdUp();
-    }
-
-    binaryName = getCardUpdaterBinaryName();
-
-    dir.cd(binaryName + ".app");
-    dir.cd("Contents");
-    dir.cd("MacOS");
-#elif defined(Q_OS_WIN)
-    binaryName = getCardUpdaterBinaryName() + ".exe";
-#else
-    binaryName = getCardUpdaterBinaryName();
-#endif
-
-    if (dir.exists(binaryName))
-        updaterCmd = dir.absoluteFilePath(binaryName);
-
-    if (updaterCmd.isEmpty()) {
-        QMessageBox::warning(this, tr("Error"),
-                             tr("Unable to run the card database updater: ") + dir.absoluteFilePath(binaryName));
-        return;
-    }
-
-    cardUpdateProcess->start("\"" + updaterCmd + "\"", QStringList());
-}
-
-void MainWindow::cardUpdateError(QProcess::ProcessError err)
-{
-    QString error;
-    switch (err) {
-        case QProcess::FailedToStart:
-            error = tr("failed to start.");
-            break;
-        case QProcess::Crashed:
-            error = tr("crashed.");
-            break;
-        case QProcess::Timedout:
-            error = tr("timed out.");
-            break;
-        case QProcess::WriteError:
-            error = tr("write error.");
-            break;
-        case QProcess::ReadError:
-            error = tr("read error.");
-            break;
-        case QProcess::UnknownError:
-        default:
-            error = tr("unknown error.");
-            break;
-    }
-
-    cardUpdateProcess->deleteLater();
-    cardUpdateProcess = nullptr;
-
-    QMessageBox::warning(this, tr("Error"), tr("The card database updater exited with an error: %1").arg(error));
-}
-
-void MainWindow::cardUpdateFinished(int, QProcess::ExitStatus)
-{
-    cardUpdateProcess->deleteLater();
-    cardUpdateProcess = nullptr;
-
-    QtConcurrent::run(db, &CardDatabase::loadCardDatabases);
+    CardUpdater* up = new CardUpdater(this);
+    up->actCheckCardUpdates(true);
 }
 
 void MainWindow::actCheckServerUpdates()

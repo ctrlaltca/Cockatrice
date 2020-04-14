@@ -29,7 +29,6 @@
 #include "rng_sfmt.h"
 #include "settingscache.h"
 #include "soundengine.h"
-#include "spoilerbackgroundupdater.h"
 #include "thememanager.h"
 #include "version_string.h"
 #include "window_main.h"
@@ -155,10 +154,6 @@ int main(int argc, char *argv[])
     ui.setWindowIcon(QPixmap("theme:cockatrice"));
 
     settingsCache->setClientID(generateClientID());
-
-    // If spoiler mode is enabled, we will download the spoilers
-    // then reload the DB. otherwise just reload the DB
-    SpoilerBackgroundUpdater spoilerBackgroundUpdater;
 
     ui.show();
     qDebug("main(): ui.show() finished");

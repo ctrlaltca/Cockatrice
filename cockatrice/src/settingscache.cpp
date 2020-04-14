@@ -176,7 +176,9 @@ SettingsCache::SettingsCache()
     releaseChannels << new StableReleaseChannel();
     releaseChannels << new BetaReleaseChannel();
 
-    mbDownloadSpoilers = settings->value("personal/downloadspoilers", false).toBool();
+    mbCheckCardUpdates = settings->value("personal/checkcardupdates", true).toBool();
+    mbCheckTokenUpdates = settings->value("personal/checktokenupdates", true).toBool();
+    mbCheckSpoilerUpdates = settings->value("personal/checkspoilerupdates", true).toBool();
 
     notifyAboutUpdates = settings->value("personal/updatenotification", true).toBool();
     notifyAboutNewVersion = settings->value("personal/newversionnotification", true).toBool();
@@ -949,11 +951,22 @@ void SettingsCache::setNotifyAboutNewVersion(int _notifyaboutnewversion)
     settings->setValue("personal/newversionnotification", notifyAboutNewVersion);
 }
 
-void SettingsCache::setDownloadSpoilerStatus(bool _spoilerStatus)
+void SettingsCache::setCheckCardUpdates(bool _value)
 {
-    mbDownloadSpoilers = _spoilerStatus;
-    settings->setValue("personal/downloadspoilers", mbDownloadSpoilers);
-    emit downloadSpoilerStatusChanged();
+    mbCheckCardUpdates = _value;
+    settings->setValue("personal/checkcardupdates", mbCheckCardUpdates);
+}
+
+void SettingsCache::setCheckTokenUpdates(bool _value)
+{
+    mbCheckTokenUpdates = _value;
+    settings->setValue("personal/checktokenupdates", mbCheckTokenUpdates);
+}
+
+void SettingsCache::setCheckSpoilerUpdates(bool _value)
+{
+    mbCheckSpoilerUpdates = _value;
+    settings->setValue("personal/checkspoilerupdates", mbCheckSpoilerUpdates);
 }
 
 void SettingsCache::setUpdateReleaseChannel(int _updateReleaseChannel)

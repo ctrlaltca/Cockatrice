@@ -43,6 +43,7 @@ private slots:
     void picsPathButtonClicked();
     void cardDatabasePathButtonClicked();
     void tokenDatabasePathButtonClicked();
+    void spoilerDatabasePathButtonClicked();
     void languageBoxChanged(int index);
 
 private:
@@ -53,6 +54,7 @@ private:
     QLineEdit *picsPathEdit;
     QLineEdit *cardDatabasePathEdit;
     QLineEdit *tokenDatabasePathEdit;
+    QLineEdit *spoilerDatabasePathEdit;
     QSpinBox pixmapCacheEdit;
     QGroupBox *personalGroupBox;
     QGroupBox *pathsGroupBox;
@@ -67,6 +69,7 @@ private:
     QLabel picsPathLabel;
     QLabel cardDatabasePathLabel;
     QLabel tokenDatabasePathLabel;
+    QLabel spoilerDatabasePathLabel;
     QLabel updateReleaseChannelLabel;
     QCheckBox showTipsOnStartup;
 };
@@ -129,15 +132,12 @@ class DeckEditorSettingsPage : public AbstractSettingsPage
 public:
     DeckEditorSettingsPage();
     void retranslateUi() override;
-    QString getLastUpdateTime();
 
 private slots:
     void storeSettings();
     void urlListChanged(const QModelIndex &, int, int, const QModelIndex &, int);
-    void setSpoilersEnabled(bool);
-    void spoilerPathButtonClicked();
-    void updateSpoilers();
-    void unlockSettings();
+    void checkCardUpdatesNow();
+    void forceCardUpdatesNow();
     void actAddURL();
     void actRemoveURL();
     void actEditURL();
@@ -150,16 +150,15 @@ private:
     QLabel urlLinkLabel;
     QCheckBox picDownloadCheckBox;
     QListWidget *urlList;
-    QCheckBox mcDownloadSpoilersCheckBox;
-    QLabel msDownloadSpoilersLabel;
+    QCheckBox mcCheckCardUpdatesCheckBox;
+    QCheckBox mcCheckTokenUpdatesCheckBox;
+    QCheckBox mcCheckSpoilerUpdatesCheckBox;
     QGroupBox *mpGeneralGroupBox;
-    QGroupBox *mpSpoilerGroupBox;
-    QLineEdit *mpSpoilerSavePathLineEdit;
+    QGroupBox *mpCardUpdatesGroupBox;
     QLabel mcSpoilerSaveLabel;
-    QLabel lastUpdatedLabel;
-    QLabel infoOnSpoilersLabel;
-    QPushButton *mpSpoilerPathButton;
-    QPushButton *updateNowButton;
+    QLabel checkCardUpdatesLabel;
+    QPushButton *checkCardUpdatesNowButton;
+    QPushButton *forceCardUpdatesNowButton;
 };
 
 class MessagesSettingsPage : public AbstractSettingsPage

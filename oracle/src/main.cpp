@@ -1,5 +1,6 @@
 #include "main.h"
 
+#include "oraclecli.h"
 #include "oraclewizard.h"
 #include "settingscache.h"
 #include "thememanager.h"
@@ -9,6 +10,7 @@
 #include <QIcon>
 #include <QLibraryInfo>
 #include <QTextCodec>
+#include <QTimer>
 #include <QTranslator>
 
 QTranslator *translator, *qtTranslator;
@@ -17,7 +19,7 @@ ThemeManager *themeManager;
 
 const QString translationPrefix = "oracle";
 QString translationPath;
-bool isSpoilersOnly;
+bool updateCards, updateTokens, updateSpoilers;
 
 void installNewTranslator()
 {
@@ -31,6 +33,8 @@ void installNewTranslator()
 
 int main(int argc, char *argv[])
 {
+    bool checkUpdatesOnly;
+
     QApplication app(argc, argv);
 
     QCoreApplication::setOrganizationName("Cockatrice");
@@ -38,12 +42,36 @@ int main(int argc, char *argv[])
     // this can't be changed, as it influences the default save path for cards.xml
     QCoreApplication::setApplicationName("Cockatrice");
 
-    // If the program is opened with the -s flag, it will only do spoilers. Otherwise it will do MTGJSON/Tokens
     QCommandLineParser parser;
-    QCommandLineOption showProgressOption("s", QCoreApplication::translate("main", "Only run in spoiler mode"));
-    parser.addOption(showProgressOption);
+    QCommandLineOption updateCardsOption(QStringList() << "c"
+                                                       << "cards",
+                                         QCoreApplication::translate("main", "Check/update cards"));
+    QCommandLineOption updateTokensOption(QStringList() << "t"
+                                                        << "tokens",
+                                          QCoreApplication::translate("main", "Check/update tokens"));
+    QCommandLineOption updateSpoilersOption(QStringList() << "s"
+                                                          << "spoilers",
+                                            QCoreApplication::translate("main", "Check/update spoilers"));
+    QCommandLineOption checkUpdatesOnlyOption(QStringList() << "check-updates",
+                                              QCoreApplication::translate("main", "Check updates CLI mode"));
+
+    parser.addOption(updateCardsOption);
+    parser.addOption(updateTokensOption);
+    parser.addOption(updateSpoilersOption);
+    parser.addOption(checkUpdatesOnlyOption);
+
     parser.process(app);
-    isSpoilersOnly = parser.isSet(showProgressOption);
+    updateCards = parser.isSet(updateCardsOption);
+    updateTokens = parser.isSet(updateTokensOption);
+    updateSpoilers = parser.isSet(updateSpoilersOption);
+    checkUpdatesOnly = parser.isSet(checkUpdatesOnlyOption);
+
+    if (!updateCards && !updateTokens && !updateSpoilers) {
+        // no specific update requestes, run them all
+        updateCards = true;
+        updateTokens = true;
+        updateSpoilers = true;
+    }
 
 #ifdef Q_OS_MAC
     translationPath = qApp->applicationDirPath() + "/../Resources/translations";
@@ -60,12 +88,19 @@ int main(int argc, char *argv[])
     translator = new QTranslator;
     installNewTranslator();
 
+    OracleCli cli;
     OracleWizard wizard;
 
-    QIcon icon("theme:appicon.svg");
-    wizard.setWindowIcon(icon);
+    if (checkUpdatesOnly) {
+        QObject::connect(&cli, SIGNAL(finished()), &app, SLOT(quit()));
+        // run the app from the appication event loop
+        QTimer::singleShot(0, &cli, SLOT(run()));
+    } else {
+        QIcon icon("theme:appicon.svg");
+        wizard.setWindowIcon(icon);
 
-    wizard.show();
+        wizard.show();
+    }
 
     return app.exec();
 }

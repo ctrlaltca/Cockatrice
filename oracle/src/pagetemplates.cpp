@@ -12,7 +12,20 @@
 #include <QNetworkReply>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QtConcurrent>
 #include <QtGui>
+
+#ifdef HAS_LZMA
+#include "lzma/decompress.h"
+#endif
+
+#ifdef HAS_ZLIB
+#include "zip/unzip.h"
+#endif
+
+#define ZIP_SIGNATURE "PK"
+// Xz stream header: 0xFD + "7zXZ"
+#define XZ_SIGNATURE "\xFD\x37\x7A\x58\x5A"
 
 SimpleDownloadFilePage::SimpleDownloadFilePage(QWidget *parent) : OracleWizardPage(parent)
 {
@@ -82,6 +95,7 @@ bool SimpleDownloadFilePage::validatePage()
     progressLabel->show();
     progressBar->show();
 
+    setEnabled(false);
     wizard()->disableButtons();
     downloadFile(url);
     return false;
@@ -125,7 +139,7 @@ void SimpleDownloadFilePage::actDownloadFinished()
         return;
     }
 
-    // save downlaoded file url, but only if the user customized it and download was successfull
+    // save downloaded file url, but only if the user customized it and download was successfull
     if (urlLineEdit->text() != getDefaultUrl()) {
         wizard()->settings->setValue(getCustomUrlSettingsKey(), urlLineEdit->text());
     } else {
@@ -134,6 +148,125 @@ void SimpleDownloadFilePage::actDownloadFinished()
 
     downloadData = reply->readAll();
     reply->deleteLater();
+
+    parseDownloadedData();
+}
+
+void SimpleDownloadFilePage::parseDownloadedData()
+{
+    progressLabel->setText(tr("Parsing file"));
+    // show an infinite progressbar
+    progressBar->setMaximum(0);
+    progressBar->setMinimum(0);
+    progressBar->setValue(0);
+    progressLabel->show();
+    progressBar->show();
+
+    // unzip the file if needed
+    if (downloadData.startsWith(XZ_SIGNATURE)) {
+#ifndef HAS_LZMA
+        parseFailed(tr("Sorry, this version of Oracle does not support xz compressed files."));
+        return;
+#else
+        future = QtConcurrent::run([&]() {
+            QBuffer inBuffer(&downloadData);
+            QBuffer outBuffer;
+            inBuffer.open(QBuffer::ReadOnly);
+            outBuffer.open(QBuffer::WriteOnly);
+            XzDecompressor xz;
+            if (!xz.decompress(&inBuffer, &outBuffer)) {
+                return tr("Xz extraction failed.");
+            }
+
+            downloadData = outBuffer.data();
+            return QString();
+        });
+
+        connect(&watcher, SIGNAL(finished()), this, SLOT(parseFinished()));
+        watcher.setFuture(future);
+        return;
+#endif
+    } else if (downloadData.startsWith(ZIP_SIGNATURE)) {
+#ifndef HAS_ZLIB
+        parseFailed(tr("Sorry, this version of Oracle does not support zipped files."));
+        return;
+#else
+        QFuture<QString> future = QtConcurrent::run([&]() {
+            QBuffer inBuffer(&downloadData);
+            QBuffer outBuffer;
+            QString fileName;
+            UnZip::ErrorCode ec;
+            UnZip uz;
+
+            ec = uz.openArchive(&inBuffer);
+            if (ec != UnZip::Ok) {
+                return tr("Failed to open Zip archive: %1.").arg(uz.formatError(ec));
+            }
+
+            if (uz.fileList().size() != 1) {
+                return tr("Zip extraction failed: the Zip archive doesn't contain exactly one file.");
+            }
+            fileName = uz.fileList().at(0);
+
+            outBuffer.open(QBuffer::ReadWrite);
+            ec = uz.extractFile(fileName, &outBuffer);
+            if (ec != UnZip::Ok) {
+                uz.closeArchive();
+                return tr("Zip extraction failed: %1.").arg(uz.formatError(ec));
+            }
+
+            downloadData = outBuffer.data();
+            return QString();
+        });
+
+        connect(&watcher, SIGNAL(finished()), this, SLOT(parseFinished()));
+        watcher.setFuture(future);
+        return;
+#endif
+    }
+
+    internalParseData();
+}
+
+void SimpleDownloadFilePage::parseFinished()
+{
+    disconnect(&watcher, SIGNAL(finished()), nullptr, nullptr);
+    QString result = watcher.future().result();
+    if (result.isEmpty()) {
+        internalParseData();
+    } else {
+        parseFailed(result);
+    }
+}
+
+void SimpleDownloadFilePage::parseFailed(const QString &message)
+{
+    setEnabled(true);
+    wizard()->enableButtons();
+    progressLabel->hide();
+    progressBar->hide();
+
+    QMessageBox::critical(this, tr("Error"), message);
+}
+
+void SimpleDownloadFilePage::internalParseData()
+{
+    /*
+     * The basic implementation does nothing.
+     * Every subclass can reimplement this method with some custom parsing
+     */
+    internalParseFinished();
+}
+
+void SimpleDownloadFilePage::internalParseProgress(int current, int total)
+{
+    progressBar->setMaximum(total);
+    progressBar->setValue(current);
+}
+
+void SimpleDownloadFilePage::internalParseFinished()
+{
+    disconnect(&watcher, SIGNAL(finished()), nullptr, nullptr);
 
     wizard()->enableButtons();
     progressLabel->hide();

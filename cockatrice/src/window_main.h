@@ -88,8 +88,6 @@ private slots:
     void promptForgotPasswordChallenge();
     void showWindowIfHidden();
 
-    void cardUpdateError(QProcess::ProcessError err);
-    void cardUpdateFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void refreshShortcuts();
     void cardDatabaseLoadingFailed();
     void cardDatabaseNewSetsFound(int numUnknownSets, QStringList unknownSetsNames);

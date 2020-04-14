@@ -1,12 +1,12 @@
 #include "dlg_settings.h"
 
 #include "carddatabase.h"
+#include "cardupdater.h"
 #include "main.h"
 #include "releasechannel.h"
 #include "sequenceEdit/sequenceedit.h"
 #include "settingscache.h"
 #include "soundengine.h"
-#include "spoilerbackgroundupdater.h"
 #include "thememanager.h"
 
 #include <QAction>
@@ -119,18 +119,25 @@ GeneralSettingsPage::GeneralSettingsPage()
     QPushButton *tokenDatabasePathButton = new QPushButton("...");
     connect(tokenDatabasePathButton, SIGNAL(clicked()), this, SLOT(tokenDatabasePathButtonClicked()));
 
+    spoilerDatabasePathEdit = new QLineEdit(settingsCache->getSpoilerDatabasePath());
+    spoilerDatabasePathEdit->setReadOnly(true);
+    QPushButton *spoilerDatabasePathButton = new QPushButton("...");
+    connect(spoilerDatabasePathButton, SIGNAL(clicked()), this, SLOT(spoilerDatabasePathButtonClicked()));
+
     if (settingsCache->getIsPortableBuild()) {
         deckPathEdit->setEnabled(false);
         replaysPathEdit->setEnabled(false);
         picsPathEdit->setEnabled(false);
         cardDatabasePathEdit->setEnabled(false);
         tokenDatabasePathEdit->setEnabled(false);
+        spoilerDatabasePathEdit->setEnabled(false);
 
         deckPathButton->setVisible(false);
         replaysPathButton->setVisible(false);
         picsPathButton->setVisible(false);
         cardDatabasePathButton->setVisible(false);
         tokenDatabasePathButton->setVisible(false);
+        spoilerDatabasePathEdit->setVisible(false);
     }
 
     auto *pathsGrid = new QGridLayout;
@@ -149,6 +156,9 @@ GeneralSettingsPage::GeneralSettingsPage()
     pathsGrid->addWidget(&tokenDatabasePathLabel, 4, 0);
     pathsGrid->addWidget(tokenDatabasePathEdit, 4, 1);
     pathsGrid->addWidget(tokenDatabasePathButton, 4, 2);
+    pathsGrid->addWidget(&spoilerDatabasePathLabel, 5, 0);
+    pathsGrid->addWidget(spoilerDatabasePathEdit, 5, 1);
+    pathsGrid->addWidget(spoilerDatabasePathButton, 5, 2);
     pathsGroupBox = new QGroupBox;
     pathsGroupBox->setLayout(pathsGrid);
 
@@ -228,6 +238,16 @@ void GeneralSettingsPage::tokenDatabasePathButtonClicked()
     settingsCache->setTokenDatabasePath(path);
 }
 
+void GeneralSettingsPage::spoilerDatabasePathButtonClicked()
+{
+    QString path = QFileDialog::getOpenFileName(this, tr("Choose path"), spoilerDatabasePathEdit->text());
+    if (path.isEmpty())
+        return;
+
+    spoilerDatabasePathEdit->setText(path);
+    settingsCache->setSpoilerDatabasePath(path);
+}
+
 void GeneralSettingsPage::languageBoxChanged(int index)
 {
     settingsCache->setLang(languageBox.itemData(index).toString());
@@ -249,6 +269,7 @@ void GeneralSettingsPage::retranslateUi()
     picsPathLabel.setText(tr("Pictures directory:"));
     cardDatabasePathLabel.setText(tr("Card database:"));
     tokenDatabasePathLabel.setText(tr("Token database:"));
+    spoilerDatabasePathLabel.setText(tr("Spoiler database:"));
     pixmapCacheLabel.setText(tr("Picture cache size:"));
     updateReleaseChannelLabel.setText(tr("Update channel"));
     updateNotificationCheckBox.setText(tr("Notify if a feature supported by the server is missing in my client"));
@@ -459,21 +480,17 @@ DeckEditorSettingsPage::DeckEditorSettingsPage()
     connect(&resetDownloadURLs, SIGNAL(clicked()), this, SLOT(resetDownloadedURLsButtonClicked()));
 
     auto *lpGeneralGrid = new QGridLayout;
-    auto *lpSpoilerGrid = new QGridLayout;
+    auto *lpCardUpdatesGrid = new QGridLayout;
 
-    mcDownloadSpoilersCheckBox.setChecked(settingsCache->getDownloadSpoilersStatus());
+    mcCheckCardUpdatesCheckBox.setChecked(settingsCache->getCheckCardUpdates());
+    mcCheckTokenUpdatesCheckBox.setChecked(settingsCache->getCheckTokenUpdates());
+    mcCheckSpoilerUpdatesCheckBox.setChecked(settingsCache->getCheckSpoilerUpdates());
 
-    mpSpoilerSavePathLineEdit = new QLineEdit(settingsCache->getSpoilerCardDatabasePath());
-    mpSpoilerSavePathLineEdit->setReadOnly(true);
-    mpSpoilerPathButton = new QPushButton("...");
-    connect(mpSpoilerPathButton, SIGNAL(clicked()), this, SLOT(spoilerPathButtonClicked()));
+    checkCardUpdatesNowButton = new QPushButton();
+    connect(checkCardUpdatesNowButton, SIGNAL(clicked()), this, SLOT(checkCardUpdatesNow()));
 
-    updateNowButton = new QPushButton(tr("Update Spoilers"));
-    updateNowButton->setFixedWidth(150);
-    connect(updateNowButton, SIGNAL(clicked()), this, SLOT(updateSpoilers()));
-
-    // Update the GUI depending on if the box is ticked or not
-    setSpoilersEnabled(mcDownloadSpoilersCheckBox.isChecked());
+    forceCardUpdatesNowButton = new QPushButton();
+    connect(forceCardUpdatesNowButton, SIGNAL(clicked()), this, SLOT(forceCardUpdatesNow()));
 
     urlList = new QListWidget;
     urlList->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -515,27 +532,22 @@ DeckEditorSettingsPage::DeckEditorSettingsPage()
     lpGeneralGrid->addWidget(&clearDownloadedPicsButton, 2, 1);
 
     // Spoiler Layout
-    lpSpoilerGrid->addWidget(&mcDownloadSpoilersCheckBox, 0, 0);
-    lpSpoilerGrid->addWidget(&mcSpoilerSaveLabel, 1, 0);
-    lpSpoilerGrid->addWidget(mpSpoilerSavePathLineEdit, 1, 1);
-    lpSpoilerGrid->addWidget(mpSpoilerPathButton, 1, 2);
-    lpSpoilerGrid->addWidget(&lastUpdatedLabel, 2, 0);
-    lpSpoilerGrid->addWidget(updateNowButton, 2, 1);
-    lpSpoilerGrid->addWidget(&infoOnSpoilersLabel, 3, 0, 1, 3, Qt::AlignTop);
-
-    // On a change to the check box, hide/unhide the other fields
-    connect(&mcDownloadSpoilersCheckBox, SIGNAL(toggled(bool)), settingsCache, SLOT(setDownloadSpoilerStatus(bool)));
-    connect(&mcDownloadSpoilersCheckBox, SIGNAL(toggled(bool)), this, SLOT(setSpoilersEnabled(bool)));
+    lpCardUpdatesGrid->addWidget(&checkCardUpdatesLabel, 0, 0);
+    lpCardUpdatesGrid->addWidget(&mcCheckCardUpdatesCheckBox, 1, 0);
+    lpCardUpdatesGrid->addWidget(&mcCheckTokenUpdatesCheckBox, 2, 0);
+    lpCardUpdatesGrid->addWidget(&mcCheckSpoilerUpdatesCheckBox, 3, 0);
+    lpCardUpdatesGrid->addWidget(checkCardUpdatesNowButton, 4, 0);
+    lpCardUpdatesGrid->addWidget(forceCardUpdatesNowButton, 4, 1);
 
     mpGeneralGroupBox = new QGroupBox;
     mpGeneralGroupBox->setLayout(lpGeneralGrid);
 
-    mpSpoilerGroupBox = new QGroupBox;
-    mpSpoilerGroupBox->setLayout(lpSpoilerGrid);
+    mpCardUpdatesGroupBox = new QGroupBox;
+    mpCardUpdatesGroupBox->setLayout(lpCardUpdatesGrid);
 
     auto *lpMainLayout = new QVBoxLayout;
     lpMainLayout->addWidget(mpGeneralGroupBox);
-    lpMainLayout->addWidget(mpSpoilerGroupBox);
+    lpMainLayout->addWidget(mpCardUpdatesGroupBox);
 
     setLayout(lpMainLayout);
 }
@@ -628,74 +640,31 @@ void DeckEditorSettingsPage::urlListChanged(const QModelIndex &, int, int, const
     storeSettings();
 }
 
-void DeckEditorSettingsPage::updateSpoilers()
+void DeckEditorSettingsPage::checkCardUpdatesNow()
 {
-    // Disable the button so the user can only press it once at a time
-    updateNowButton->setDisabled(true);
-    updateNowButton->setText(tr("Updating..."));
-
-    // Create a new SBU that will act as if the client was just reloaded
-    auto *sbu = new SpoilerBackgroundUpdater();
-    connect(sbu, SIGNAL(spoilerCheckerDone()), this, SLOT(unlockSettings()));
-    connect(sbu, SIGNAL(spoilersUpdatedSuccessfully()), this, SLOT(unlockSettings()));
+    CardUpdater* up = new CardUpdater(this);
+    up->actCheckCardUpdates(true);
 }
 
-void DeckEditorSettingsPage::unlockSettings()
+void DeckEditorSettingsPage::forceCardUpdatesNow()
 {
-    updateNowButton->setDisabled(false);
-    updateNowButton->setText(tr("Update Spoilers"));
-}
-
-QString DeckEditorSettingsPage::getLastUpdateTime()
-{
-    QString fileName = settingsCache->getSpoilerCardDatabasePath();
-    QFileInfo fi(fileName);
-    QDir fileDir(fi.path());
-    QFile file(fileName);
-
-    if (file.exists()) {
-        return fi.lastModified().toString("MMM d, hh:mm");
-    }
-
-    return QString();
-}
-
-void DeckEditorSettingsPage::spoilerPathButtonClicked()
-{
-    QString lsPath = QFileDialog::getExistingDirectory(this, tr("Choose path"), mpSpoilerSavePathLineEdit->text());
-    if (lsPath.isEmpty()) {
-        return;
-    }
-
-    mpSpoilerSavePathLineEdit->setText(lsPath + "/spoiler.xml");
-    settingsCache->setSpoilerDatabasePath(lsPath + "/spoiler.xml");
-}
-
-void DeckEditorSettingsPage::setSpoilersEnabled(bool anInput)
-{
-    msDownloadSpoilersLabel.setEnabled(anInput);
-    mcSpoilerSaveLabel.setEnabled(anInput);
-    mpSpoilerSavePathLineEdit->setEnabled(anInput);
-    mpSpoilerPathButton->setEnabled(anInput);
-    lastUpdatedLabel.setEnabled(anInput);
-    updateNowButton->setEnabled(anInput);
-    infoOnSpoilersLabel.setEnabled(anInput);
-
-    if (!anInput) {
-        SpoilerBackgroundUpdater::deleteSpoilerFile();
-    }
+    CardUpdater* up = new CardUpdater(this);
+    up->actCheckCardUpdates(false);
 }
 
 void DeckEditorSettingsPage::retranslateUi()
 {
-    mpGeneralGroupBox->setTitle(tr("URL Download Priority"));
-    mpSpoilerGroupBox->setTitle(tr("Spoilers"));
-    mcDownloadSpoilersCheckBox.setText(tr("Download Spoilers Automatically"));
-    mcSpoilerSaveLabel.setText(tr("Spoiler Location:"));
-    lastUpdatedLabel.setText(tr("Last Change") + ": " + getLastUpdateTime());
-    infoOnSpoilersLabel.setText(tr("Spoilers download automatically on launch") + "\n" +
-                                tr("Press the button to manually update without relaunching") + "\n\n" +
-                                tr("Do not close settings until manual update is complete"));
+    mpGeneralGroupBox->setTitle(tr("Card pictures"));
+    mpCardUpdatesGroupBox->setTitle(tr("Card updates"));
+
+    checkCardUpdatesLabel.setText(tr("Automatically check for updates of"));
+    mcCheckCardUpdatesCheckBox.setText(tr("Cards"));
+    mcCheckTokenUpdatesCheckBox.setText(tr("Tokens"));
+    mcCheckSpoilerUpdatesCheckBox.setText(tr("Spoilers"));
+
+    checkCardUpdatesNowButton->setText(tr("Check for updates now"));
+    forceCardUpdatesNowButton->setText(tr("Force update now"));
+
     picDownloadCheckBox.setText(tr("Download card pictures on the fly"));
     urlLinkLabel.setText(QString("<a href='%1'>%2</a>").arg(WIKI_CUSTOM_PIC_URL).arg(tr("How to add a custom URL")));
     clearDownloadedPicsButton.setText(tr("Delete Downloaded Images"));

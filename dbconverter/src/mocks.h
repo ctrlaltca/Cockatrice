@@ -35,7 +35,7 @@ public:
     QString getCustomCardDatabasePath() const;
     QString getCardDatabasePath() const;
     QString getTokenDatabasePath() const;
-    QString getSpoilerCardDatabasePath() const;
+    QString getSpoilerDatabasePath() const;
     CardDatabaseSettings &cardDatabase() const;
 signals:
     void cardDatabasePathChanged();

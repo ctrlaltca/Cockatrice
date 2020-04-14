@@ -13,50 +13,6 @@
 // users will still be able to find these sets and prioritize them manually
 const QStringList nonEnglishSets = {"4BB", "FBB", "PS11", "PSAL", "REN", "RIN"};
 
-class SetToDownload
-{
-private:
-    QString shortName, longName;
-    QList<QVariant> cards;
-    QDate releaseDate;
-    QString setType;
-
-public:
-    const QString &getShortName() const
-    {
-        return shortName;
-    }
-    const QString &getLongName() const
-    {
-        return longName;
-    }
-    const QList<QVariant> &getCards() const
-    {
-        return cards;
-    }
-    const QString &getSetType() const
-    {
-        return setType;
-    }
-    const QDate &getReleaseDate() const
-    {
-        return releaseDate;
-    }
-    SetToDownload(QString _shortName,
-                  QString _longName,
-                  QList<QVariant> _cards,
-                  QString _setType = QString(),
-                  const QDate &_releaseDate = QDate())
-        : shortName(std::move(_shortName)), longName(std::move(_longName)), cards(std::move(_cards)),
-          releaseDate(_releaseDate), setType(std::move(_setType))
-    {
-    }
-    bool operator<(const SetToDownload &set) const
-    {
-        return longName.compare(set.longName, Qt::CaseInsensitive) < 0;
-    }
-};
-
 class SplitCardPart
 {
 public:
@@ -91,8 +47,6 @@ class OracleImporter : public CardDatabase
 private:
     const QStringList mainCardTypes = {"Planeswalker", "Creature", "Land",       "Sorcery",
                                        "Instant",      "Artifact", "Enchantment"};
-    QList<SetToDownload> allSets;
-    QVariantMap setsMap;
     QString dataDir;
 
     QString getMainCardType(const QStringList &typeList);
@@ -103,28 +57,25 @@ private:
                         QList<CardRelation *> &relatedCards,
                         CardInfoPerSet setInfo);
 signals:
-    void setIndexChanged(int cardsImported, int setIndex, const QString &setName);
+    void internalParseProgress(int current, int total);
     void dataReadProgress(int bytesRead, int totalBytes);
 
 public:
     explicit OracleImporter(const QString &_dataDir, QObject *parent = nullptr);
-    bool readSetsFromByteArray(const QByteArray &data);
-    int startImport();
-    bool saveToFile(const QString &fileName, const QString &sourceUrl, const QString &sourceVersion);
+    QString startImport(QByteArray &data, const QString &sourceUrl, const QString & sourceVersion);
     int importCardsFromSet(CardSetPtr currentSet, const QList<QVariant> &cards, bool skipSpecialNums = true);
-    QList<SetToDownload> &getSets()
-    {
-        return allSets;
-    }
     const QString &getDataDir() const
     {
         return dataDir;
     }
-    void clear();
 
 protected:
+    inline QString capitalizeSetType(QString setType);
     inline QString getStringPropertyFromMap(QVariantMap card, QString propertyName);
     void sortAndReduceColors(QString &colors);
+
+protected slots:
+    void jsonProgress(int current, int total);
 };
 
 #endif

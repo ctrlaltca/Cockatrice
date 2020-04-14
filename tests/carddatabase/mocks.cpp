@@ -37,7 +37,7 @@ QString SettingsCache::getTokenDatabasePath() const
 {
     return QString("%1/tokens.xml").arg(CARDDB_DATADIR);
 }
-QString SettingsCache::getSpoilerCardDatabasePath() const
+QString SettingsCache::getSpoilerDatabasePath() const
 {
     return QString("%1/spoiler.xml").arg(CARDDB_DATADIR);
 }

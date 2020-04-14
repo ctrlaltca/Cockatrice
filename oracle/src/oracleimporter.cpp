@@ -20,64 +20,111 @@ OracleImporter::OracleImporter(const QString &_dataDir, QObject *parent) : CardD
 {
 }
 
-bool OracleImporter::readSetsFromByteArray(const QByteArray &data)
+QString OracleImporter::capitalizeSetType(QString setType)
 {
-    QList<SetToDownload> newSetList;
+    // capitalize set type
+    if (setType.length() > 0) {
+        // basic grammar for words that aren't capitalized, like in "From the Vault"
+        const QStringList noCapitalize = {"the", "a", "an", "on", "to", "for", "of", "in", "and", "with", "or"};
+        QStringList words = setType.split("_");
+        setType.clear();
+        bool first = false;
+        for (auto &item : words) {
+            if (first && noCapitalize.contains(item)) {
+                setType += item + QString(" ");
+            } else {
+                setType += item[0].toUpper() + item.mid(1, -1) + QString(" ");
+                first = true;
+            }
+        }
+        setType = setType.trimmed();
+    }
+    return setType;
+}
 
+void OracleImporter::jsonProgress(int current, int total)
+{
+    // first 50% of parsing is reading the json file
+    if (total == 0) {
+        emit internalParseProgress(0, 100);
+    } else {
+        int perc = current * 50 / total;
+        emit internalParseProgress(perc, 100);
+    }
+}
+
+QString OracleImporter::startImport(QByteArray &data, const QString &sourceUrl, const QString &sourceVersion)
+{
+    emit internalParseProgress(0, 100);
+
+    connect(&QtJson::Json::watcher, SIGNAL(progress(int, int)), this, SLOT(jsonProgress(int, int)),
+            Qt::UniqueConnection);
     bool ok;
-    setsMap = QtJson::Json::parse(QString(data), ok).toMap();
+    QVariantMap jsonMap = QtJson::Json::parse(data, ok).toMap();
     if (!ok) {
-        qDebug() << "error: QtJson::Json::parse()";
-        return false;
+        return tr("Error parsing Json data");
     }
 
-    QListIterator<QVariant> it(setsMap.values());
-    QVariantMap map;
+    disconnect(&QtJson::Json::watcher, SIGNAL(progress(int, int)), nullptr, nullptr);
 
+    emit internalParseProgress(50, 100);
+
+    QVariantMap setMap;
     QString shortName;
     QString longName;
     QList<QVariant> setCards;
     QString setType;
     QDate releaseDate;
 
-    while (it.hasNext()) {
-        map = it.next().toMap();
-        shortName = map.value("code").toString().toUpper();
-        longName = map.value("name").toString();
-        setCards = map.value("cards").toList();
-        setType = map.value("type").toString();
-        // capitalize set type
-        if (setType.length() > 0) {
-            // basic grammar for words that aren't capitalized, like in "From the Vault"
-            const QStringList noCapitalize = {"the", "a", "an", "on", "to", "for", "of", "in", "and", "with", "or"};
-            QStringList words = setType.split("_");
-            setType.clear();
-            bool first = false;
-            for (auto &item : words) {
-                if (first && noCapitalize.contains(item)) {
-                    setType += item + QString(" ");
-                } else {
-                    setType += item[0].toUpper() + item.mid(1, -1) + QString(" ");
-                    first = true;
-                }
-            }
-            setType = setType.trimmed();
-        }
+    int setIndex = 0;
+    int numSets = jsonMap.values().size();
+
+    if (numSets == 0) {
+        return tr("The file was retrieved successfully, but it does not contain any sets data.");
+    }
+
+    // empty card database
+    CardDatabase::clear();
+    // add an empty set for tokens
+    CardSetPtr tokenSet = CardSet::newInstance(TOKENS_SETNAME, tr("Dummy set containing tokens"), "Tokens");
+    sets.insert(TOKENS_SETNAME, tokenSet);
+
+    for (QVariant jsonValue : jsonMap.values()) {
+        setMap = jsonValue.toMap();
+        shortName = setMap.value("code").toString().toUpper();
+        longName = setMap.value("name").toString();
+        setCards = setMap.value("cards").toList();
+        setType = capitalizeSetType(setMap.value("type").toString());
         if (!nonEnglishSets.contains(shortName)) {
-            releaseDate = map.value("releaseDate").toDate();
+            releaseDate = setMap.value("releaseDate").toDate();
         } else {
             releaseDate = QDate();
         }
-        newSetList.append(SetToDownload(shortName, longName, setCards, setType, releaseDate));
+
+        CardSetPtr newSet = CardSet::newInstance(shortName, longName, setType, releaseDate);
+        if (!sets.contains(newSet->getShortName())) {
+            sets.insert(newSet->getShortName(), newSet);
+        }
+
+        int numCardsInSet = importCardsFromSet(newSet, setCards);
+
+        ++setIndex;
+
+        // sets parsing moves the percent from 50 to 90
+        emit internalParseProgress(50 + setIndex * 40 / numSets, 100);
     }
 
-    std::sort(newSetList.begin(), newSetList.end());
+    emit internalParseProgress(90, 100);
 
-    if (newSetList.isEmpty()) {
-        return false;
+    CockatriceXml4Parser parser;
+    int ret = parser.saveToByteArray(sets, cards, data, sourceUrl, sourceVersion);
+
+    if (!ret) {
+        return tr("Unable to export XML data");
     }
-    allSets = newSetList;
-    return true;
+
+    emit internalParseProgress(100, 100);
+    return QString();
 }
 
 QString OracleImporter::getMainCardType(const QStringList &typeList)
@@ -436,42 +483,4 @@ void OracleImporter::sortAndReduceColors(QString &colors)
         else
             lastChar = colors.at(i);
     }
-}
-
-int OracleImporter::startImport()
-{
-    int setCards = 0, setIndex = 0;
-    // add an empty set for tokens
-    CardSetPtr tokenSet = CardSet::newInstance(TOKENS_SETNAME, tr("Dummy set containing tokens"), "Tokens");
-    sets.insert(TOKENS_SETNAME, tokenSet);
-
-    for (const SetToDownload &curSetToParse : allSets) {
-        CardSetPtr newSet = CardSet::newInstance(curSetToParse.getShortName(), curSetToParse.getLongName(),
-                                                 curSetToParse.getSetType(), curSetToParse.getReleaseDate());
-        if (!sets.contains(newSet->getShortName()))
-            sets.insert(newSet->getShortName(), newSet);
-
-        int numCardsInSet = importCardsFromSet(newSet, curSetToParse.getCards());
-
-        ++setIndex;
-
-        emit setIndexChanged(numCardsInSet, setIndex, curSetToParse.getLongName());
-    }
-
-    emit setIndexChanged(setCards, setIndex, QString());
-
-    // total number of sets
-    return setIndex;
-}
-
-bool OracleImporter::saveToFile(const QString &fileName, const QString &sourceUrl, const QString &sourceVersion)
-{
-    CockatriceXml4Parser parser;
-    return parser.saveToFile(sets, cards, fileName, sourceUrl, sourceVersion);
-}
-
-void OracleImporter::clear()
-{
-    CardDatabase::clear();
-    allSets.clear();
 }

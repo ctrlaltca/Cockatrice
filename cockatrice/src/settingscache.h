@@ -49,8 +49,6 @@ signals:
     void pixmapCacheSizeChanged(int newSizeInMBs);
     void masterVolumeChanged(int value);
     void chatMentionCompleterChanged();
-    void downloadSpoilerTimeIndexChanged();
-    void downloadSpoilerStatusChanged();
     void useTearOffMenusChanged(bool state);
 
 private:
@@ -72,7 +70,9 @@ private:
     bool notifyAboutNewVersion;
     bool showTipsOnStartup;
     QList<int> seenTips;
-    bool mbDownloadSpoilers;
+    bool mbCheckCardUpdates;
+    bool mbCheckTokenUpdates;
+    bool mbCheckSpoilerUpdates;
     int updateReleaseChannel;
     int maxFontSize;
     bool picDownload;
@@ -172,7 +172,7 @@ public:
     {
         return cardDatabasePath;
     }
-    QString getSpoilerCardDatabasePath() const
+    QString getSpoilerDatabasePath() const
     {
         return spoilerDatabasePath;
     }
@@ -458,13 +458,23 @@ public:
     {
         return isPortableBuild;
     }
-    bool getDownloadSpoilersStatus() const
+    bool getCheckCardUpdates() const
     {
-        return mbDownloadSpoilers;
+        return mbCheckCardUpdates;
     }
-public slots:
-    void setDownloadSpoilerStatus(bool _spoilerStatus);
+    bool getCheckTokenUpdates() const
+    {
+        return mbCheckTokenUpdates;
+    }
+    bool getCheckSpoilerUpdates() const
+    {
+        return mbCheckSpoilerUpdates;
+    }
 
+public slots:
+    void setCheckCardUpdates(bool _value);
+    void setCheckTokenUpdates(bool _value);
+    void setCheckSpoilerUpdates(bool _value);
     void setMainWindowGeometry(const QByteArray &_mainWindowGeometry);
     void setTokenDialogGeometry(const QByteArray &_tokenDialog);
     void setLang(const QString &_lang);
